@@ -122,15 +122,15 @@ download-raylib-windows:
 	@echo "Downloading RayLib for Windows MinGW..."
 	@mkdir -p lib/windows
 	@cd lib/windows && \
-		wget -q --show-progress https://github.com/raysan5/raylib/releases/download/5.0.0/raylib-5.0.0_win64_mingw-w64.zip && \
-		unzip -q raylib-5.0.0_win64_mingw-w64.zip && \
+		wget -q --show-progress https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_mingw-w64.zip && \
+		unzip -q raylib-5.5_win64_mingw-w64.zip && \
 		echo "RayLib for Windows downloaded successfully!"
 
 # Windows compilation with downloaded RayLib
 windows-with-raylib: download-raylib-windows
 	$(MINGW_CC) $(SOURCES) -o $(TARGET).exe $(CFLAGS) \
-		-I./lib/windows/raylib-5.0.0_win64_mingw-w64/include \
-		-L./lib/windows/raylib-5.0.0_win64_mingw-w64/lib \
+		-I./lib/windows/raylib-5.5_win64_mingw-w64/include \
+		-L./lib/windows/raylib-5.5_win64_mingw-w64/lib \
 		-lraylib -lopengl32 -lgdi32 -lwinmm -static
 
 # Create distribution package

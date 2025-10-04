@@ -1,1 +1,5 @@
 *.o
+*.gz
+lib/
+space-is-left
+space-is-left.exe
