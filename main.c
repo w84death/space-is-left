@@ -1006,7 +1006,7 @@ void RenderArena(GameState* game) {
     // Draw energy warning if low
     if (game->rider.energy < 20 && game->rider.alive) {
         float pulse = sinf(game->gameTime * 10.0f) * 0.5f + 0.5f;
-        Color warningColor = (Color){255, 0, 0, (int)(pulse * 100)};
+        Color warningColor = (Color){255, 255, 255, (int)(pulse * 100)};
         DrawCylinder((Vector3){0, -1, 0}, 0, halfSize * 2, 0.1f, 32, warningColor);
     }
 }
@@ -1041,11 +1041,8 @@ void RenderPickupIndicators(GameState* game, EngineState* engine) {
         // CASE 1: ON-SCREEN INDICATOR (This logic is correct)
         // ===================================================================
         if (isOnScreen) {
-            float energyPercent = game->rider.energy / MAX_ENERGY;
+
             Color arrowColor = SKYBLUE;
-            if (energyPercent < 0.2f) arrowColor = RED;
-            else if (energyPercent < 0.4f) arrowColor = ORANGE;
-            else if (energyPercent < 0.6f) arrowColor = YELLOW;
 
             float pulse = sinf(game->gameTime * 5.0f) * 5.0f + 10.0f;
             arrowColor.a = 200;
@@ -1203,7 +1200,13 @@ void RenderUI(GameState* game, EngineState* engine) {
 
     // Energy bar
     float energyPercent = game->rider.energy / MAX_ENERGY;
-    Color energyColor = energyPercent > 0.3f ? GREEN : (energyPercent > 0.1f ? YELLOW : RED);
+    Color energyColor = SKYBLUE;
+    if (energyPercent < 0.2f) {
+        // Flash white when energy is low
+        if (fmod(game->gameTime, 0.4f) < 0.2f) {
+            energyColor = WHITE;
+        }
+    }
     DrawRectangle(10, 100, 120, 12, DARKGRAY);
     DrawRectangle(10, 100, (int)(120 * energyPercent), 12, energyColor);
     DrawRectangleLines(10, 100, 120, 12, WHITE);

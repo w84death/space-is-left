@@ -2,5 +2,6 @@
 *.gz
 *.zip
 lib/
+dist/
 space-is-left
 space-is-left.exe

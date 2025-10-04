@@ -103,6 +103,16 @@ upx-windows-with-raylib: windows-with-raylib
 	}
 	$(UPX) --best --lzma $(TARGET).exe
 
+upx-linux-with-raylib: linux-with-raylib
+	@command -v $(UPX) >/dev/null 2>&1 || { \
+		echo "UPX is not installed. Install it to compress executables."; \
+		echo "  Ubuntu/Debian: sudo apt-get install upx-ucl"; \
+		echo "  Fedora: sudo dnf install upx"; \
+		echo "  Arch: sudo pacman -S upx"; \
+		exit 1; \
+	}
+	$(UPX) --best --lzma $(TARGET)
+
 upx-windows32: windows32
 	@command -v $(UPX) >/dev/null 2>&1 || { \
 		echo "UPX is not installed. Install it to compress executables."; \
@@ -116,6 +126,9 @@ upx-windows32: windows32
 # Compressed release builds
 release-upx: CFLAGS += -O3 -DNDEBUG
 release-upx: clean $(TARGET) upx
+
+release-linux-upx: CFLAGS += -O3 -DNDEBUG
+release-linux-upx: clean linux-with-raylib upx-linux-with-raylib
 
 release-windows-upx: CFLAGS += -O3 -DNDEBUG
 release-windows-upx: clean windows-with-raylib upx-windows-with-raylib
@@ -186,12 +199,28 @@ download-raylib-windows:
 		unzip -q raylib-5.5_win64_mingw-w64.zip && \
 		echo "RayLib for Windows downloaded successfully!"
 
+# Download pre-compiled RayLib for Linux
+download-raylib-linux:
+	@echo "Downloading RayLib for Linux..."
+	@mkdir -p lib/linux
+	@cd lib/linux && \
+		wget -q --show-progress https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_linux_amd64.tar.gz && \
+		tar -xzf raylib-5.5_linux_amd64.tar.gz && \
+		echo "RayLib for Linux downloaded successfully!"
+
 # Windows compilation with downloaded RayLib
 windows-with-raylib: download-raylib-windows
 	$(MINGW_CC) $(SOURCES) -o $(TARGET).exe $(CFLAGS) \
 		-I./lib/windows/raylib-5.5_win64_mingw-w64/include \
 		-L./lib/windows/raylib-5.5_win64_mingw-w64/lib \
 		-lraylib -lopengl32 -lgdi32 -lwinmm -static
+
+# Linux compilation with downloaded RayLib (standalone)
+linux-with-raylib: download-raylib-linux
+	$(CC) $(SOURCES) -o $(TARGET) $(CFLAGS) \
+		-I./lib/linux/raylib-5.5_linux_amd64/include \
+		-L./lib/linux/raylib-5.5_linux_amd64/lib \
+		-lraylib -lGL -lm -lpthread -ldl -lrt -lX11 -static-libgcc
 
 # Create distribution package
 dist: release
@@ -205,6 +234,18 @@ dist: release
 	rm -rf dist/
 	echo "Distribution package created: space-is-left-$(shell date +%Y%m%d).tar.gz"
 
+# Create standalone Linux distribution package
+dist-linux: linux-with-raylib
+	mkdir -p dist
+	cp $(TARGET) dist/
+	cp README.md dist/
+	echo "Space is Left - Game Engine (Standalone Linux)" > dist/VERSION.txt
+	echo "Version: 1.0.0" >> dist/VERSION.txt
+	echo "Build Date: $(shell date)" >> dist/VERSION.txt
+	tar -czf space-is-left-linux-$(shell date +%Y%m%d).tar.gz dist/
+	rm -rf dist/
+	echo "Standalone Linux distribution package created: space-is-left-linux-$(shell date +%Y%m%d).tar.gz"
+
 # Create compressed distribution package
 dist-upx: release-upx
 	mkdir -p dist
@@ -216,6 +257,18 @@ dist-upx: release-upx
 	tar -czf space-is-left-upx-$(shell date +%Y%m%d).tar.gz dist/
 	rm -rf dist/
 	echo "Compressed distribution package created: space-is-left-upx-$(shell date +%Y%m%d).tar.gz"
+
+# Create compressed standalone Linux distribution package
+dist-linux-upx: linux-with-raylib upx-linux-with-raylib
+	mkdir -p dist
+	cp $(TARGET) dist/
+	cp README.md dist/
+	echo "Space is Left - Game Engine (Standalone Linux - UPX Compressed)" > dist/VERSION.txt
+	echo "Version: 1.0.0" >> dist/VERSION.txt
+	echo "Build Date: $(shell date)" >> dist/VERSION.txt
+	tar -czf space-is-left-linux-upx-$(shell date +%Y%m%d).tar.gz dist/
+	rm -rf dist/
+	echo "Compressed standalone Linux distribution package created: space-is-left-linux-upx-$(shell date +%Y%m%d).tar.gz"
 
 # Create Windows distribution package
 dist-windows: windows-with-raylib
@@ -272,20 +325,25 @@ help:
 	@echo "  make windows-dynamic - Build Windows exe (dynamic linking)"
 	@echo "  make windows32    - Build 32-bit Windows exe"
 	@echo "  make windows-with-raylib - Build with downloaded RayLib"
+	@echo "  make linux-with-raylib - Build standalone Linux with downloaded RayLib"
 	@echo "  make test-windows - Test Windows exe with Wine"
 	@echo "  make all-platforms - Build for both Linux and Windows"
 	@echo ""
 	@echo "UPX Compression:"
 	@echo "  make upx          - Compress Linux binary with UPX"
 	@echo "  make upx-windows  - Compress Windows exe with UPX"
+	@echo "  make upx-linux-with-raylib - Compress standalone Linux binary with UPX"
 	@echo "  make upx-windows-with-raylib - Compress Windows exe (with RayLib) with UPX"
 	@echo "  make upx-windows32 - Compress 32-bit Windows exe with UPX"
 	@echo "  make release-upx  - Build optimized and compressed Linux binary"
+	@echo "  make release-linux-upx - Build optimized and compressed standalone Linux"
 	@echo "  make release-windows-upx - Build optimized and compressed Windows exe"
 	@echo ""
 	@echo "Distribution:"
 	@echo "  make dist         - Create distribution package"
 	@echo "  make dist-upx     - Create compressed distribution package"
+	@echo "  make dist-linux   - Create standalone Linux distribution package"
+	@echo "  make dist-linux-upx - Create compressed standalone Linux distribution package"
 	@echo "  make dist-windows - Create Windows distribution package"
 	@echo "  make dist-windows-upx - Create compressed Windows distribution package"
 	@echo ""
@@ -305,14 +363,16 @@ help:
 	@echo "  make install-mingw-fedora - Install MinGW on Fedora"
 	@echo "  make install-mingw-arch   - Install MinGW on Arch"
 	@echo "  make download-raylib-windows - Download RayLib for Windows"
+	@echo "  make download-raylib-linux - Download RayLib for Linux"
 	@echo ""
 	@echo "Info:"
 	@echo "  make help         - Show this help message"
 
-.PHONY: all windows windows-dynamic windows32 windows-with-raylib \
+.PHONY: all windows windows-dynamic windows32 windows-with-raylib linux-with-raylib \
         debug release all-platforms run test-windows \
-        upx upx-windows upx-windows-with-raylib upx-windows32 release-upx release-windows-upx \
-        clean rebuild dist dist-upx dist-windows dist-windows-upx format check \
-        install-deps-ubuntu install-deps-fedora install-deps-arch \
+        upx upx-windows upx-linux-with-raylib upx-windows-with-raylib upx-windows32 \
+        release-upx release-linux-upx release-windows-upx \
+        clean rebuild dist dist-upx dist-linux dist-linux-upx dist-windows dist-windows-upx \
+        format check install-deps-ubuntu install-deps-fedora install-deps-arch \
         install-mingw-ubuntu install-mingw-fedora install-mingw-arch \
-        download-raylib-windows gamepad-test run-gamepad-test help
+        download-raylib-windows download-raylib-linux gamepad-test run-gamepad-test help
