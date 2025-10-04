@@ -19,6 +19,7 @@ In Space is Left, you control a futuristic line rider that continuously moves fo
 - **1** - Select Easy difficulty (in menu)
 - **2** - Select Hardcore difficulty (in menu)
 - **S** - Toggle sound effects on/off
+- **F** - Toggle FPS counter on/off
 - **ESC** - Exit game
 
 ### 🎮 Gamepad/Controller Support
@@ -156,6 +157,7 @@ Space is Left is built on a custom game engine with:
 - **Entity Component System**: Flexible entity management
 - **Particle System**: Dynamic visual effects
 - **Chiptune Sound Effects**: Retro-style beeps and boops for all interactions
+- **Performance Monitor**: Built-in FPS counter with color-coded performance indicator
 - **Modular Architecture**: Separated engine, rendering, input, and game logic
 - **Cross-platform**: Works on Linux, Windows, and macOS
 

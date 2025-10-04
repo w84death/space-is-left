@@ -153,6 +153,7 @@ typedef struct {
     bool soundEnabled;
     bool useFallbackAudio;
     float masterVolume;
+    bool showFPS;
 } GameState;
 
 // =====================================
@@ -1198,6 +1199,13 @@ void RenderUI(GameState* game, EngineState* engine) {
     if (game->rider.boosted) {
         DrawText("BOOST!", screenWidth / 2 - MeasureText("BOOST!", 40) / 2, 100, 40, YELLOW);
     }
+    
+    // FPS counter
+    if (game->showFPS) {
+        int fps = GetFPS();
+        Color fpsColor = fps >= 55 ? GREEN : (fps >= 30 ? YELLOW : RED);
+        DrawText(TextFormat("FPS: %d", fps), screenWidth - 100, 10, 20, fpsColor);
+    }
 
     // Shield indicator
     if (game->rider.shieldTimer > 0) {
@@ -1224,6 +1232,10 @@ void RenderUI(GameState* game, EngineState* engine) {
     // Sound indicator
     DrawText(game->soundEnabled ? "Sound: ON (S to toggle)" : "Sound: OFF (S to toggle)", 
              10, screenHeight - 30, 14, game->soundEnabled ? GREEN : DARKGRAY);
+    
+    // FPS toggle indicator
+    DrawText(game->showFPS ? "FPS: ON (F to toggle)" : "FPS: OFF (F to toggle)",
+             10, screenHeight - 50, 14, game->showFPS ? GREEN : DARKGRAY);
 
     // Pause indicator
     if (game->paused && !game->gameOver) {
@@ -1269,6 +1281,7 @@ void InitGame(GameState* game) {
     bool savedSoundEnabled = game->soundEnabled;
     bool savedUseFallbackAudio = game->useFallbackAudio;
     float savedMasterVolume = game->masterVolume;
+    bool savedShowFPS = game->showFPS;
 
     memset(game, 0, sizeof(GameState));
 
@@ -1289,6 +1302,7 @@ void InitGame(GameState* game) {
     game->soundEnabled = savedSoundEnabled;
     game->useFallbackAudio = savedUseFallbackAudio;
     game->masterVolume = savedMasterVolume;
+    game->showFPS = savedShowFPS;
 
     // Set difficulty multiplier
     game->difficultyMultiplier = (game->difficulty == DIFFICULTY_HARDCORE) ? HARDCORE_SPEED_MULTI : 1.0f;
@@ -1353,6 +1367,11 @@ void UpdateGame(GameState* game, EngineState* engine) {
     if (IsKeyPressed(KEY_S)) {
         game->soundEnabled = !game->soundEnabled;
         if (game->soundEnabled) PlayMenuSound(game);
+    }
+    
+    // Toggle FPS display with F key
+    if (IsKeyPressed(KEY_F)) {
+        game->showFPS = !game->showFPS;
     }
 
     // Handle restart and menu
@@ -1451,6 +1470,9 @@ int main(int argc, char* argv[]) {
     
     // Initialize sound system
     InitSounds(game);
+    
+    // Enable FPS counter by default
+    game->showFPS = true;
 
     // Set up camera for the game
     engine->viewMode = VIEW_MODE_ORBIT;
