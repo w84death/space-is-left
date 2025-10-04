@@ -14,15 +14,15 @@ void Input_Update(EngineState* engine) {
     if (engine->useInternalResolution) {
         if (engine->maintainAspectRatio) {
             // Convert from screen space to render texture space with aspect ratio letterboxing
-            float scaleX = (float)INTERNAL_RENDER_WIDTH / engine->destRect.width;
-            float scaleY = (float)INTERNAL_RENDER_HEIGHT / engine->destRect.height;
+            float scaleX = (float)engine->internalWidth / engine->destRect.width;
+            float scaleY = (float)engine->internalHeight / engine->destRect.height;
             
             rawMousePos.x = (rawMousePos.x - engine->destRect.x) * scaleX;
             rawMousePos.y = (rawMousePos.y - engine->destRect.y) * scaleY;
         } else {
             // Convert from screen space to render texture space (stretched full screen)
-            float scaleX = (float)INTERNAL_RENDER_WIDTH / (float)engine->windowWidth;
-            float scaleY = (float)INTERNAL_RENDER_HEIGHT / (float)engine->windowHeight;
+            float scaleX = (float)engine->internalWidth / (float)engine->windowWidth;
+            float scaleY = (float)engine->internalHeight / (float)engine->windowHeight;
             
             rawMousePos.x = rawMousePos.x * scaleX;
             rawMousePos.y = rawMousePos.y * scaleY;
@@ -30,9 +30,9 @@ void Input_Update(EngineState* engine) {
         
         // Clamp to internal resolution bounds
         if (rawMousePos.x < 0) rawMousePos.x = 0;
-        if (rawMousePos.x > INTERNAL_RENDER_WIDTH) rawMousePos.x = INTERNAL_RENDER_WIDTH;
+        if (rawMousePos.x > engine->internalWidth) rawMousePos.x = engine->internalWidth;
         if (rawMousePos.y < 0) rawMousePos.y = 0;
-        if (rawMousePos.y > INTERNAL_RENDER_HEIGHT) rawMousePos.y = INTERNAL_RENDER_HEIGHT;
+        if (rawMousePos.y > engine->internalHeight) rawMousePos.y = engine->internalHeight;
     }
     
     engine->mousePosition = rawMousePos;

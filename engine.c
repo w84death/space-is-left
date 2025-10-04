@@ -8,6 +8,41 @@
 // Engine Core Implementation
 // =====================================
 
+// Select appropriate internal resolution based on monitor aspect ratio
+void Utils_SelectInternalResolution(EngineState* engine, int monitorWidth, int monitorHeight) {
+    if (!engine) return;
+    
+    // Calculate monitor aspect ratio
+    engine->monitorAspectRatio = (float)monitorWidth / (float)monitorHeight;
+    
+    // Select internal resolution based on aspect ratio
+    if (engine->monitorAspectRatio >= 2.2f) {
+        // Ultra-wide (21:9 or wider)
+        engine->internalWidth = INTERNAL_RENDER_WIDTH_21_9;
+        engine->internalHeight = INTERNAL_RENDER_HEIGHT_21_9;
+        TraceLog(LOG_INFO, "Detected ultra-wide monitor (21:9), using %dx%d internal resolution", 
+                engine->internalWidth, engine->internalHeight);
+    } else if (engine->monitorAspectRatio >= 1.7f) {
+        // Standard widescreen (16:9)
+        engine->internalWidth = INTERNAL_RENDER_WIDTH_16_9;
+        engine->internalHeight = INTERNAL_RENDER_HEIGHT_16_9;
+        TraceLog(LOG_INFO, "Detected 16:9 monitor, using %dx%d internal resolution", 
+                engine->internalWidth, engine->internalHeight);
+    } else if (engine->monitorAspectRatio >= 1.55f) {
+        // 16:10 aspect ratio
+        engine->internalWidth = INTERNAL_RENDER_WIDTH_16_10;
+        engine->internalHeight = INTERNAL_RENDER_HEIGHT_16_10;
+        TraceLog(LOG_INFO, "Detected 16:10 monitor, using %dx%d internal resolution", 
+                engine->internalWidth, engine->internalHeight);
+    } else {
+        // 4:3 or similar
+        engine->internalWidth = INTERNAL_RENDER_WIDTH_4_3;
+        engine->internalHeight = INTERNAL_RENDER_HEIGHT_4_3;
+        TraceLog(LOG_INFO, "Detected 4:3 monitor, using %dx%d internal resolution", 
+                engine->internalWidth, engine->internalHeight);
+    }
+}
+
 EngineState* Engine_Init(int width, int height, const char* title) {
     // Suppress unused parameter warnings (using fullscreen mode instead)
     (void)width;
@@ -20,37 +55,62 @@ EngineState* Engine_Init(int width, int height, const char* title) {
         return NULL;
     }
     
-    // Initialize window first, then go fullscreen
+    // Detect monitor resolution
     engine->windowTitle = title ? title : ENGINE_NAME;
-    engine->windowWidth = width > 0 ? width : DEFAULT_WINDOW_WIDTH;
-    engine->windowHeight = height > 0 ? height : DEFAULT_WINDOW_HEIGHT;
     
+    // Get monitor info before creating window
+    // Note: On some systems, we need to initialize video subsystem first
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
+    
+    // Get primary monitor dimensions (monitor 0)
+    int monitorCount = GetMonitorCount();
+    int monitor = (monitorCount > 0) ? 0 : -1;
+    int monitorWidth = 1920;  // Default fallback
+    int monitorHeight = 1080; // Default fallback
+    
+    // Try to get actual monitor dimensions if available
+    if (monitor >= 0) {
+        // Create a temporary window to properly initialize the graphics context
+        InitWindow(100, 100, engine->windowTitle);
+        monitorWidth = GetMonitorWidth(monitor);
+        monitorHeight = GetMonitorHeight(monitor);
+        CloseWindow();
+    }
+    
+    // Now initialize with monitor resolution
+    engine->windowWidth = (width > 0) ? width : monitorWidth;
+    engine->windowHeight = (height > 0) ? height : monitorHeight;
+    
+    // Reinitialize window with proper size and go fullscreen
+    SetConfigFlags(FLAG_FULLSCREEN_MODE | FLAG_VSYNC_HINT);
     InitWindow(engine->windowWidth, engine->windowHeight, engine->windowTitle);
     SetTargetFPS(DEFAULT_FPS);
     
-    // Now toggle to fullscreen after window is created
-    ToggleFullscreen();
-    
-    // Get actual fullscreen dimensions
-    if (IsWindowFullscreen()) {
-        int monitor = GetCurrentMonitor();
-        engine->windowWidth = GetMonitorWidth(monitor);
-        engine->windowHeight = GetMonitorHeight(monitor);
-    } else {
-        engine->windowWidth = GetScreenWidth();
-        engine->windowHeight = GetScreenHeight();
+    // Ensure we're in fullscreen mode
+    if (!IsWindowFullscreen()) {
+        ToggleFullscreen();
     }
     
-    // Initialize low-resolution render texture
-    engine->renderTarget = LoadRenderTexture(INTERNAL_RENDER_WIDTH, INTERNAL_RENDER_HEIGHT);
+    // Store actual dimensions (may differ from requested)
+    engine->windowWidth = GetScreenWidth();
+    engine->windowHeight = GetScreenHeight();
+    
+    // Log the detected resolution
+    TraceLog(LOG_INFO, "Monitor Resolution: %dx%d", monitorWidth, monitorHeight);
+    TraceLog(LOG_INFO, "Window Resolution: %dx%d", engine->windowWidth, engine->windowHeight);
+    
+    // Select appropriate internal resolution based on monitor aspect ratio
+    Utils_SelectInternalResolution(engine, monitorWidth, monitorHeight);
+    
+    // Initialize low-resolution render texture with dynamic resolution
+    engine->renderTarget = LoadRenderTexture(engine->internalWidth, engine->internalHeight);
     SetTextureFilter(engine->renderTarget.texture, TEXTURE_FILTER_POINT); // Pixelated look
     SetTextureWrap(engine->renderTarget.texture, TEXTURE_WRAP_CLAMP);  // Prevent edge bleeding
     engine->useInternalResolution = true;  // Enable internal resolution by default
     engine->maintainAspectRatio = false;  // Start with stretched full screen
     
-    // Set up source and destination rectangles for scaling
-    engine->sourceRect = (Rectangle){ 0, 0, INTERNAL_RENDER_WIDTH, INTERNAL_RENDER_HEIGHT };
+    // Set up source and destination rectangles for scaling with dynamic resolution
+    engine->sourceRect = (Rectangle){ 0, 0, (float)engine->internalWidth, (float)engine->internalHeight };
     
     // Set destination rectangle to fill entire screen
     engine->destRect = (Rectangle){
@@ -147,16 +207,24 @@ void Engine_BeginFrame(EngineState* engine) {
             engine->windowWidth = GetMonitorWidth(monitor);
             engine->windowHeight = GetMonitorHeight(monitor);
         } else {
-            engine->windowWidth = DEFAULT_WINDOW_WIDTH;
-            engine->windowHeight = DEFAULT_WINDOW_HEIGHT;
+            // Use a reasonable windowed size (75% of monitor size)
+            int monitor = GetCurrentMonitor();
+            engine->windowWidth = GetMonitorWidth(monitor) * 0.75;
+            engine->windowHeight = GetMonitorHeight(monitor) * 0.75;
+            
+            // Center the window on screen
+            int monitorX = GetMonitorWidth(monitor);
+            int monitorY = GetMonitorHeight(monitor);
+            SetWindowPosition((monitorX - engine->windowWidth) / 2, 
+                            (monitorY - engine->windowHeight) / 2);
         }
         
         // Recalculate destination rectangle based on aspect ratio mode
         if (engine->maintainAspectRatio) {
-            float scale = fminf((float)engine->windowWidth / INTERNAL_RENDER_WIDTH,
-                               (float)engine->windowHeight / INTERNAL_RENDER_HEIGHT);
-            float scaledWidth = INTERNAL_RENDER_WIDTH * scale;
-            float scaledHeight = INTERNAL_RENDER_HEIGHT * scale;
+            float scale = fminf((float)engine->windowWidth / engine->internalWidth,
+                               (float)engine->windowHeight / engine->internalHeight);
+            float scaledWidth = engine->internalWidth * scale;
+            float scaledHeight = engine->internalHeight * scale;
             engine->destRect = (Rectangle){
                 (engine->windowWidth - scaledWidth) / 2,
                 (engine->windowHeight - scaledHeight) / 2,
@@ -185,10 +253,10 @@ void Engine_BeginFrame(EngineState* engine) {
             
             // Recalculate destination rectangle based on aspect ratio mode
             if (engine->maintainAspectRatio) {
-                float scale = fminf((float)currentWidth / INTERNAL_RENDER_WIDTH,
-                                   (float)currentHeight / INTERNAL_RENDER_HEIGHT);
-                float scaledWidth = INTERNAL_RENDER_WIDTH * scale;
-                float scaledHeight = INTERNAL_RENDER_HEIGHT * scale;
+                float scale = fminf((float)currentWidth / engine->internalWidth,
+                                   (float)currentHeight / engine->internalHeight);
+                float scaledWidth = engine->internalWidth * scale;
+                float scaledHeight = engine->internalHeight * scale;
                 engine->destRect = (Rectangle){
                     (currentWidth - scaledWidth) / 2,
                     (currentHeight - scaledHeight) / 2,
@@ -221,10 +289,10 @@ void Engine_BeginFrame(EngineState* engine) {
         // Recalculate destination rectangle based on aspect ratio mode
         if (engine->maintainAspectRatio) {
             // Calculate destination rectangle to maintain aspect ratio
-            float scale = fminf((float)engine->windowWidth / INTERNAL_RENDER_WIDTH,
-                               (float)engine->windowHeight / INTERNAL_RENDER_HEIGHT);
-            float scaledWidth = INTERNAL_RENDER_WIDTH * scale;
-            float scaledHeight = INTERNAL_RENDER_HEIGHT * scale;
+            float scale = fminf((float)engine->windowWidth / engine->internalWidth,
+                               (float)engine->windowHeight / engine->internalHeight);
+            float scaledWidth = engine->internalWidth * scale;
+            float scaledHeight = engine->internalHeight * scale;
             engine->destRect = (Rectangle){
                 (engine->windowWidth - scaledWidth) / 2,
                 (engine->windowHeight - scaledHeight) / 2,
@@ -299,7 +367,7 @@ void Engine_EndFrame(EngineState* engine) {
         ClearBackground(BLACK);  // Black letterboxing
         
         // Draw the render texture scaled up (flip Y coordinate for correct orientation)
-        Rectangle flippedSource = { 0, 0, INTERNAL_RENDER_WIDTH, -INTERNAL_RENDER_HEIGHT };
+        Rectangle flippedSource = { 0, 0, (float)engine->internalWidth, -(float)engine->internalHeight };
         DrawTexturePro(engine->renderTarget.texture,
                       flippedSource,
                       engine->destRect,

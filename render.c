@@ -41,7 +41,7 @@ void Render_DebugInfo(EngineState* engine) {
     
     // Resolution mode
     if (engine->useInternalResolution) {
-        DrawText(TextFormat("Resolution: %dx%d (Internal)", INTERNAL_RENDER_WIDTH, INTERNAL_RENDER_HEIGHT), 5, y, fontSize, YELLOW);
+        DrawText(TextFormat("Resolution: %dx%d (Internal)", engine->internalWidth, engine->internalHeight), 5, y, fontSize, YELLOW);
     } else {
         DrawText(TextFormat("Resolution: %dx%d (Native)", engine->windowWidth, engine->windowHeight), 5, y, fontSize, textColor);
     }
@@ -106,7 +106,7 @@ void Render_DebugInfo(EngineState* engine) {
     }
     
     // Controls hint
-    y = (engine->useInternalResolution ? INTERNAL_RENDER_HEIGHT : engine->windowHeight) - 50;
+    y = (engine->useInternalResolution ? engine->internalHeight : engine->windowHeight) - 50;
     if (engine->activeGamepad >= 0) {
         DrawText("Gamepad Camera: L-Stick/D-Pad: Move | R-Stick: Rotate | LB/LT/L3/R3: Zoom", 5, y, fontSize, DARKGRAY);
         y += lineHeight;

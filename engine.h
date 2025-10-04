@@ -17,9 +17,26 @@
 #define DEFAULT_WINDOW_HEIGHT 1080
 #define DEFAULT_FPS 60
 
-// Internal rendering resolution
-#define INTERNAL_RENDER_WIDTH 960
-#define INTERNAL_RENDER_HEIGHT 540
+// Internal rendering resolution options for different aspect ratios
+// 16:9 aspect ratio (most common for modern monitors)
+#define INTERNAL_RENDER_WIDTH_16_9 640
+#define INTERNAL_RENDER_HEIGHT_16_9 360
+
+// 16:10 aspect ratio
+#define INTERNAL_RENDER_WIDTH_16_10 640
+#define INTERNAL_RENDER_HEIGHT_16_10 400
+
+// 4:3 aspect ratio (older monitors)
+#define INTERNAL_RENDER_WIDTH_4_3 640
+#define INTERNAL_RENDER_HEIGHT_4_3 480
+
+// 21:9 ultrawide
+#define INTERNAL_RENDER_WIDTH_21_9 840
+#define INTERNAL_RENDER_HEIGHT_21_9 360
+
+// Default internal resolution (will be set dynamically)
+#define INTERNAL_RENDER_WIDTH 640
+#define INTERNAL_RENDER_HEIGHT 360
 
 // Camera settings
 #define CAMERA_MOUSE_SENSITIVITY 0.003f
@@ -136,6 +153,11 @@ typedef struct {
     int windowWidth;
     int windowHeight;
     const char* windowTitle;
+
+    // Dynamic resolution settings
+    int internalWidth;     // Actual internal render width based on aspect ratio
+    int internalHeight;    // Actual internal render height based on aspect ratio
+    float monitorAspectRatio;  // Detected monitor aspect ratio
 
     // Camera
     Camera3D camera;
@@ -279,5 +301,8 @@ bool Utils_IsPointInBox(Vector2 point, Vector2 boxStart, Vector2 boxEnd);
 // Collision detection
 bool Utils_CheckCollisionSpheres(Vector3 pos1, float radius1, Vector3 pos2, float radius2);
 bool Utils_CheckCollisionBoxes(BoundingBox box1, BoundingBox box2);
+
+// Resolution utilities
+void Utils_SelectInternalResolution(EngineState* engine, int monitorWidth, int monitorHeight);
 
 #endif // SPACE_IS_LEFT_ENGINE_H

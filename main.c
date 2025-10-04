@@ -140,7 +140,7 @@ typedef struct {
     float powerupSpawnTimer;
     int highScore;
     int highScoreHardcore;
-    
+
     // Sound effects
     Sound soundPickup;
     Sound soundTurn;
@@ -165,7 +165,7 @@ void PlayFallbackBeep(int frequency, int duration) {
     #ifdef __linux__
     // Use beep command if available, or echo to PC speaker
     char cmd[256];
-    snprintf(cmd, sizeof(cmd), "( speaker-test -t sine -f %d -l 1 & pid=$!; sleep 0.%03d; kill -9 $pid ) >/dev/null 2>&1 &", 
+    snprintf(cmd, sizeof(cmd), "( speaker-test -t sine -f %d -l 1 & pid=$!; sleep 0.%03d; kill -9 $pid ) >/dev/null 2>&1 &",
              frequency, duration);
     system(cmd);
     #else
@@ -176,7 +176,7 @@ void PlayFallbackBeep(int frequency, int duration) {
 
 void PlayFallbackSound(GameState* game, Sound* sound) {
     if (!game->soundEnabled) return;
-    
+
     // Map different sounds to different beep patterns
     if (sound == &game->soundPickup) {
         PlayFallbackBeep(800, 100);
@@ -201,7 +201,7 @@ void PlayGameSound(GameState* game, Sound sound) {
     if (!game->soundEnabled) {
         return;
     }
-    
+
     // If using fallback audio, we can't play the actual sound
     // For now, just skip it - the caller should use specific functions
     if (game->useFallbackAudio) {
@@ -209,7 +209,7 @@ void PlayGameSound(GameState* game, Sound sound) {
         // This is handled in the specific play functions below
         return;
     }
-    
+
     // Play the actual raylib sound
     PlaySound(sound);
 }
@@ -217,7 +217,7 @@ void PlayGameSound(GameState* game, Sound sound) {
 // Helper functions for playing specific sounds
 void PlayPickupSound(GameState* game) {
     if (!game->soundEnabled) return;
-    
+
     if (game->useFallbackAudio) {
         PlayFallbackBeep(800, 100);
     } else {
@@ -227,7 +227,7 @@ void PlayPickupSound(GameState* game) {
 
 void PlayBoostSound(GameState* game) {
     if (!game->soundEnabled) return;
-    
+
     if (game->useFallbackAudio) {
         PlayFallbackBeep(1000, 150);
     } else {
@@ -237,7 +237,7 @@ void PlayBoostSound(GameState* game) {
 
 void PlayShieldSound(GameState* game) {
     if (!game->soundEnabled) return;
-    
+
     if (game->useFallbackAudio) {
         PlayFallbackBeep(600, 200);
     } else {
@@ -247,7 +247,7 @@ void PlayShieldSound(GameState* game) {
 
 void PlayMenuSound(GameState* game) {
     if (!game->soundEnabled) return;
-    
+
     if (game->useFallbackAudio) {
         PlayFallbackBeep(700, 80);
     } else {
@@ -257,7 +257,7 @@ void PlayMenuSound(GameState* game) {
 
 void PlayTurnSound(GameState* game) {
     if (!game->soundEnabled) return;
-    
+
     if (game->useFallbackAudio) {
         PlayFallbackBeep(300, 30);
     } else {
@@ -267,7 +267,7 @@ void PlayTurnSound(GameState* game) {
 
 void PlayGameOverSound(GameState* game) {
     if (!game->soundEnabled) return;
-    
+
     if (game->useFallbackAudio) {
         PlayFallbackBeep(200, 500);
     } else {
@@ -277,7 +277,7 @@ void PlayGameOverSound(GameState* game) {
 
 void PlayPauseSound(GameState* game) {
     if (!game->soundEnabled) return;
-    
+
     if (game->useFallbackAudio) {
         PlayFallbackBeep(400, 100);
     } else {
@@ -287,7 +287,7 @@ void PlayPauseSound(GameState* game) {
 
 void PlayLoopCompleteSound(GameState* game) {
     if (!game->soundEnabled) return;
-    
+
     if (game->useFallbackAudio) {
         PlayFallbackBeep(1200, 250);
     } else {
@@ -298,16 +298,16 @@ void PlayLoopCompleteSound(GameState* game) {
 Sound GenerateBeepSound(float frequency, float duration, int sampleRate) {
     int frames = (int)(duration * sampleRate);
     short* data = (short*)calloc(frames, sizeof(short));
-    
+
     if (!data) {
         printf("ERROR: Failed to allocate memory for sound\n");
         return (Sound){0};
     }
-    
+
     for (int i = 0; i < frames; i++) {
         float t = (float)i / sampleRate;
         float sample = sinf(2.0f * PI * frequency * t);
-        
+
         // Simple envelope
         float envelope = 1.0f;
         if (i < frames / 10) {
@@ -315,27 +315,27 @@ Sound GenerateBeepSound(float frequency, float duration, int sampleRate) {
         } else if (i > frames * 9 / 10) {
             envelope = (float)(frames - i) / (frames / 10);
         }
-        
+
         // Increase amplitude
         data[i] = (short)(sample * envelope * 30000.0f);
     }
-    
+
     Wave wave = {0};
     wave.frameCount = frames;
     wave.sampleRate = sampleRate;
     wave.sampleSize = 16;
     wave.channels = 1;
     wave.data = data;
-    
+
     printf("Generated beep: freq=%.1fHz, duration=%.2fs, frames=%d\n", frequency, duration, frames);
-    
+
     Sound sound = LoadSoundFromWave(wave);
     free(data);  // Free data after loading sound
-    
+
     if (sound.frameCount == 0) {
         printf("ERROR: Failed to load sound from wave\n");
     }
-    
+
     return sound;
 }
 
@@ -352,17 +352,17 @@ Sound GenerateGameOverSound() {
 void InitSounds(GameState* game) {
     printf("\n=== AUDIO INITIALIZATION ===\n");
     printf("Initializing audio device...\n");
-    
+
     // Try to initialize audio device
     InitAudioDevice();
-    
+
     // Check if audio device is ready
     if (!IsAudioDeviceReady()) {
         printf("WARNING: Raylib audio not available!\n");
         printf("Using fallback system beeps instead.\n");
         game->soundEnabled = true;
         game->useFallbackAudio = true;
-        
+
         // Initialize dummy sound structures so the game doesn't crash
         game->soundPickup = (Sound){0};
         game->soundPickup.frameCount = 1;
@@ -380,45 +380,45 @@ void InitSounds(GameState* game) {
         game->soundPause.frameCount = 7;
         game->soundLoopComplete = (Sound){0};
         game->soundLoopComplete.frameCount = 8;
-        
+
         printf("=== FALLBACK AUDIO READY ===\n\n");
         return;
     }
-    
+
     printf("Audio device ready!\n");
     game->useFallbackAudio = false;
-    
+
     // Generate simple sounds with lower sample rates for better compatibility
     printf("Generating sounds...\n");
-    
+
     game->soundPickup = GeneratePickupSound();
     printf("  - Pickup sound generated\n");
-    
+
     game->soundTurn = GenerateBeepSound(300.0f, 0.05f, 22050);
     printf("  - Turn sound generated\n");
-    
+
     game->soundGameOver = GenerateGameOverSound();
     printf("  - Game over sound generated\n");
-    
+
     game->soundBoost = GenerateBeepSound(1000.0f, 0.2f, 22050);
     printf("  - Boost sound generated\n");
-    
+
     game->soundShield = GenerateBeepSound(600.0f, 0.25f, 22050);
     printf("  - Shield sound generated\n");
-    
+
     game->soundMenuSelect = GenerateBeepSound(700.0f, 0.1f, 22050);
     printf("  - Menu sound generated\n");
-    
+
     game->soundPause = GenerateBeepSound(400.0f, 0.15f, 22050);
     printf("  - Pause sound generated\n");
-    
+
     game->soundLoopComplete = GenerateBeepSound(1200.0f, 0.3f, 22050);
     printf("  - Loop complete sound generated\n");
-    
+
     // Set volumes
     game->soundEnabled = true;
     game->masterVolume = 1.0f;  // Maximum volume
-    
+
     SetMasterVolume(1.0f);
     SetSoundVolume(game->soundPickup, 1.0f);
     SetSoundVolume(game->soundTurn, 0.3f);  // Quieter for turn
@@ -428,14 +428,14 @@ void InitSounds(GameState* game) {
     SetSoundVolume(game->soundMenuSelect, 0.8f);
     SetSoundVolume(game->soundPause, 0.8f);
     SetSoundVolume(game->soundLoopComplete, 1.0f);
-    
+
     printf("Sound volumes set\n");
     printf("=== AUDIO READY ===\n\n");
-    
+
     // Play test sound
     printf("Playing test sound (menu select)...\n");
     PlaySound(game->soundMenuSelect);
-    
+
     // Test all sounds
     printf("Testing sound playback:\n");
     printf("  Menu sound frameCount: %d\n", game->soundMenuSelect.frameCount);
@@ -445,7 +445,7 @@ void InitSounds(GameState* game) {
 
 void UnloadSounds(GameState* game) {
     if (!game->soundEnabled || game->useFallbackAudio) return;
-    
+
     printf("Unloading sounds...\n");
     UnloadSound(game->soundPickup);
     UnloadSound(game->soundTurn);
@@ -455,7 +455,7 @@ void UnloadSounds(GameState* game) {
     UnloadSound(game->soundMenuSelect);
     UnloadSound(game->soundPause);
     UnloadSound(game->soundLoopComplete);
-    
+
     printf("Closing audio device...\n");
     CloseAudioDevice();
 }
@@ -600,37 +600,37 @@ void UpdateLineRider(GameState* game, EngineState* engine) {
 
     // MAIN MECHANIC: Can only turn left!
     float turnRate = 0.0f;
-    
+
     // Keyboard and mouse controls (full speed)
     if (IsKeyDown(KEY_SPACE) || IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
         turnRate = 1.0f;
     }
-    
+
     // Add gamepad controls with analog support
     if (engine->activeGamepad >= 0) {
         // Digital controls (full speed) - A button only
         if (IsGamepadButtonDown(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) {  // A button
             turnRate = 1.0f;
         }
-        
+
         // Analog controls (variable speed)
         float triggerValue = engine->gamepadRightTrigger[engine->activeGamepad];
         if (triggerValue > 0.1f) {
             turnRate = fmaxf(turnRate, triggerValue);  // Use trigger value for variable turn
         }
-        
+
         // Left stick horizontal axis (only left direction)
         float stickX = engine->gamepadLeftStick[engine->activeGamepad].x;
         if (stickX < -0.1f) {
             turnRate = fmaxf(turnRate, fabsf(stickX));  // Variable turn based on stick position
         }
     }
-    
+
     if (turnRate > 0) {
         float turnAmount = TURN_SPEED * turnRate * deltaTime * game->difficultyMultiplier;
         rider->direction += turnAmount;
         rider->totalRotation += turnAmount;
-        
+
         // Play turn sound (with rate limiting)
         static float lastTurnSound = 0;
         if (game->gameTime - lastTurnSound > 0.1f) {
@@ -744,7 +744,7 @@ void UpdateLineRider(GameState* game, EngineState* engine) {
 
 void CollectPowerup(GameState* game, Powerup* powerup) {
     LineRider* rider = &game->rider;
-    
+
     switch (powerup->type) {
         case POWERUP_ENERGY:
             rider->energy += ENERGY_BAR_VALUE;
@@ -1021,8 +1021,8 @@ void RenderOffscreenIndicators(GameState* game, EngineState* engine) {
         Vector2 screenPos = GetWorldToScreen(game->powerups[i].position, engine->camera);
 
         // Check if off-screen (use internal resolution dimensions when active)
-        int screenWidth = engine->useInternalResolution ? INTERNAL_RENDER_WIDTH : engine->windowWidth;
-        int screenHeight = engine->useInternalResolution ? INTERNAL_RENDER_HEIGHT : engine->windowHeight;
+        int screenWidth = engine->useInternalResolution ? engine->internalWidth : engine->windowWidth;
+        int screenHeight = engine->useInternalResolution ? engine->internalHeight : engine->windowHeight;
         int margin = 50;
 
         if (screenPos.x < -margin || screenPos.x > screenWidth + margin ||
@@ -1133,8 +1133,8 @@ void RenderOffscreenIndicators(GameState* game, EngineState* engine) {
 
 void RenderUI(GameState* game, EngineState* engine) {
     // Use internal resolution dimensions when active, otherwise use actual window size
-    int screenWidth = engine->useInternalResolution ? INTERNAL_RENDER_WIDTH : engine->windowWidth;
-    int screenHeight = engine->useInternalResolution ? INTERNAL_RENDER_HEIGHT : engine->windowHeight;
+    int screenWidth = engine->useInternalResolution ? engine->internalWidth : engine->windowWidth;
+    int screenHeight = engine->useInternalResolution ? engine->internalHeight : engine->windowHeight;
 
     // Show menu if in menu state
     if (game->inMenu) {
@@ -1145,20 +1145,20 @@ void RenderUI(GameState* game, EngineState* engine) {
 
         // Easy option
         Color easyColor = (game->difficulty == DIFFICULTY_EASY) ? GREEN : WHITE;
-        const char* easyText = (engine->activeGamepad >= 0) ? "[1/D-PAD LEFT] EASY" : "[1] EASY";
+        const char* easyText = "[LEFT] EASY";
         DrawText(easyText, screenWidth / 2 - 120, 160, 16, easyColor);
         DrawText("Normal speed", screenWidth / 2 - 120, 180, 12, LIGHTGRAY);
         DrawText("For beginners", screenWidth / 2 - 120, 195, 12, LIGHTGRAY);
 
         // Hardcore option
         Color hardcoreColor = (game->difficulty == DIFFICULTY_HARDCORE) ? RED : WHITE;
-        const char* hardcoreText = (engine->activeGamepad >= 0) ? "[2/D-PAD RIGHT] HARDCORE" : "[2] HARDCORE";
+        const char* hardcoreText = "[RIGHT] HARDCORE";
         DrawText(hardcoreText, screenWidth / 2 + 20, 160, 16, hardcoreColor);
         DrawText("2x speed!", screenWidth / 2 + 20, 180, 12, ORANGE);
         DrawText("For experts", screenWidth / 2 + 20, 195, 12, ORANGE);
 
         // Start instruction
-        const char* startText = (engine->activeGamepad >= 0) ? "Press ENTER or A to start" : "Press ENTER to start";
+        const char* startText = (engine->activeGamepad >= 0) ? "A to start" : "Press ENTER to start";
         DrawText(startText, screenWidth / 2 - MeasureText(startText, 16) / 2, 230, 16, LIME);
 
         // High scores
@@ -1167,10 +1167,10 @@ void RenderUI(GameState* game, EngineState* engine) {
 
         // Show gamepad status
         if (engine->activeGamepad >= 0) {
-            DrawText(TextFormat("Gamepad %d Connected", engine->activeGamepad + 1), 
+            DrawText(TextFormat("Gamepad %d Connected", engine->activeGamepad + 1),
                     screenWidth / 2 - MeasureText("Gamepad 1 Connected", 12) / 2, 295, 12, LIME);
         }
-        
+
         DrawText("Press ESC to exit", screenWidth / 2 - MeasureText("Press ESC to exit", 12) / 2, 320, 12, DARKGRAY);
         return;
     }
@@ -1200,7 +1200,7 @@ void RenderUI(GameState* game, EngineState* engine) {
     if (game->rider.boosted) {
         DrawText("BOOST!", screenWidth / 2 - MeasureText("BOOST!", 24) / 2, 60, 24, YELLOW);
     }
-    
+
     // FPS counter
     if (game->showFPS) {
         int fps = GetFPS();
@@ -1229,11 +1229,11 @@ void RenderUI(GameState* game, EngineState* engine) {
     } else {
         DrawText("SPACE or LEFT MOUSE: Turn Left", screenWidth - 180, screenHeight - 20, 10, LIGHTGRAY);
     }
-    
+
     // Sound indicator
-    DrawText(game->soundEnabled ? "Sound: ON (S to toggle)" : "Sound: OFF (S to toggle)", 
+    DrawText(game->soundEnabled ? "Sound: ON (S to toggle)" : "Sound: OFF (S to toggle)",
              10, screenHeight - 20, 10, game->soundEnabled ? GREEN : DARKGRAY);
-    
+
     // FPS toggle indicator
     DrawText(game->showFPS ? "FPS: ON (F to toggle)" : "FPS: OFF (F to toggle)",
              10, screenHeight - 32, 10, game->showFPS ? GREEN : DARKGRAY);
@@ -1269,7 +1269,7 @@ void InitGame(GameState* game) {
     DifficultyLevel savedDifficulty = game->difficulty;
     int savedHighScore = game->highScore;
     int savedHighScoreHardcore = game->highScoreHardcore;
-    
+
     // Preserve sound system - IMPORTANT: Don't wipe out sounds!
     Sound savedSoundPickup = game->soundPickup;
     Sound savedSoundTurn = game->soundTurn;
@@ -1290,7 +1290,7 @@ void InitGame(GameState* game) {
     game->difficulty = savedDifficulty;
     game->highScore = savedHighScore;
     game->highScoreHardcore = savedHighScoreHardcore;
-    
+
     // Restore sound system
     game->soundPickup = savedSoundPickup;
     game->soundTurn = savedSoundTurn;
@@ -1331,18 +1331,18 @@ void UpdateGame(GameState* game, EngineState* engine) {
     // Handle menu input
     if (game->inMenu) {
         // Keyboard or gamepad D-pad for difficulty selection
-        if (IsKeyPressed(KEY_ONE) || 
+        if (IsKeyPressed(KEY_LEFT) ||
             (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_LEFT_FACE_LEFT))) {
             game->difficulty = DIFFICULTY_EASY;
             PlayMenuSound(game);
         }
-        if (IsKeyPressed(KEY_TWO) || 
+        if (IsKeyPressed(KEY_RIGHT) ||
             (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_LEFT_FACE_RIGHT))) {
             game->difficulty = DIFFICULTY_HARDCORE;
             PlayMenuSound(game);
         }
         // Start game with Enter or gamepad A button
-        if (IsKeyPressed(KEY_ENTER) || 
+        if (IsKeyPressed(KEY_ENTER) ||
             (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))) {
             game->inMenu = false;
             InitGame(game);
@@ -1357,19 +1357,19 @@ void UpdateGame(GameState* game, EngineState* engine) {
     }
 
     // Handle pause
-    if ((IsKeyPressed(KEY_P) || 
-         (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_MIDDLE_RIGHT))) 
+    if ((IsKeyPressed(KEY_P) ||
+         (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_MIDDLE_RIGHT)))
         && !game->gameOver) {
         game->paused = !game->paused;
         PlayPauseSound(game);
     }
-    
+
     // Toggle sound with S key
     if (IsKeyPressed(KEY_S)) {
         game->soundEnabled = !game->soundEnabled;
         if (game->soundEnabled) PlayMenuSound(game);
     }
-    
+
     // Toggle FPS display with F key
     if (IsKeyPressed(KEY_F)) {
         game->showFPS = !game->showFPS;
@@ -1389,14 +1389,14 @@ void UpdateGame(GameState* game, EngineState* engine) {
         }
 
         // Restart with Enter or gamepad A button
-        if (IsKeyPressed(KEY_ENTER) || 
+        if (IsKeyPressed(KEY_ENTER) ||
             (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))) {
             InitGame(game);
             PlayMenuSound(game);
             return;
         }
         // Return to menu with M key or gamepad B button
-        if (IsKeyPressed(KEY_M) || 
+        if (IsKeyPressed(KEY_M) ||
             (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT))) {
             game->inMenu = true;
             game->gameOver = false;
@@ -1449,8 +1449,8 @@ int main(int argc, char* argv[]) {
     // Initialize random seed
     srand(time(NULL));
 
-    // Initialize engine
-    EngineState* engine = Engine_Init(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, GAME_TITLE);
+    // Initialize engine (pass 0,0 to auto-detect monitor resolution)
+    EngineState* engine = Engine_Init(0, 0, GAME_TITLE);
     if (!engine) {
         printf("Failed to initialize engine!\n");
         return 1;
@@ -1468,10 +1468,10 @@ int main(int argc, char* argv[]) {
     game->inMenu = true;
     game->difficulty = DIFFICULTY_EASY;
     game->difficultyMultiplier = 1.0f;
-    
+
     // Initialize sound system
     InitSounds(game);
-    
+
     // Enable FPS counter by default
     game->showFPS = true;
 
@@ -1551,7 +1551,7 @@ int main(int argc, char* argv[]) {
 
         // Render UI overlay (2D elements)
         RenderUI(game, engine);
-        
+
         // Render off-screen indicators for energy pickups (skip if in menu)
         if (game->rider.alive && !game->paused && !game->gameOver && !game->inMenu) {
             RenderOffscreenIndicators(game, engine);
@@ -1566,11 +1566,11 @@ int main(int argc, char* argv[]) {
         game->highScore = (int)game->rider.score;
         // Could save to file here
     }
-    
+
     // Cleanup
     UnloadSounds(game);
     free(game);
     Engine_Shutdown(engine);
-    
+
     return 0;
 }
