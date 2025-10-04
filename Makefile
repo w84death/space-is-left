@@ -38,6 +38,9 @@ ifeq ($(OS),Windows_NT)
     TARGET := $(TARGET).exe
 endif
 
+# UPX compression tool
+UPX = upx
+
 # Default target
 all: $(TARGET)
 
@@ -68,6 +71,54 @@ debug: clean $(TARGET)
 # Release build with optimizations
 release: CFLAGS += -O3 -DNDEBUG
 release: clean $(TARGET)
+
+# UPX compression targets
+upx: $(TARGET)
+	@command -v $(UPX) >/dev/null 2>&1 || { \
+		echo "UPX is not installed. Install it to compress executables."; \
+		echo "  Ubuntu/Debian: sudo apt-get install upx-ucl"; \
+		echo "  Fedora: sudo dnf install upx"; \
+		echo "  Arch: sudo pacman -S upx"; \
+		exit 1; \
+	}
+	$(UPX) --best --lzma $(TARGET)
+
+upx-windows: windows
+	@command -v $(UPX) >/dev/null 2>&1 || { \
+		echo "UPX is not installed. Install it to compress executables."; \
+		echo "  Ubuntu/Debian: sudo apt-get install upx-ucl"; \
+		echo "  Fedora: sudo dnf install upx"; \
+		echo "  Arch: sudo pacman -S upx"; \
+		exit 1; \
+	}
+	$(UPX) --best --lzma $(TARGET).exe
+
+upx-windows-with-raylib: windows-with-raylib
+	@command -v $(UPX) >/dev/null 2>&1 || { \
+		echo "UPX is not installed. Install it to compress executables."; \
+		echo "  Ubuntu/Debian: sudo apt-get install upx-ucl"; \
+		echo "  Fedora: sudo dnf install upx"; \
+		echo "  Arch: sudo pacman -S upx"; \
+		exit 1; \
+	}
+	$(UPX) --best --lzma $(TARGET).exe
+
+upx-windows32: windows32
+	@command -v $(UPX) >/dev/null 2>&1 || { \
+		echo "UPX is not installed. Install it to compress executables."; \
+		echo "  Ubuntu/Debian: sudo apt-get install upx-ucl"; \
+		echo "  Fedora: sudo dnf install upx"; \
+		echo "  Arch: sudo pacman -S upx"; \
+		exit 1; \
+	}
+	$(UPX) --best --lzma $(TARGET)32.exe
+
+# Compressed release builds
+release-upx: CFLAGS += -O3 -DNDEBUG
+release-upx: clean $(TARGET) upx
+
+release-windows-upx: CFLAGS += -O3 -DNDEBUG
+release-windows-upx: clean windows-with-raylib upx-windows-with-raylib
 
 # Build all platforms
 all-platforms: all windows
@@ -154,6 +205,18 @@ dist: release
 	rm -rf dist/
 	echo "Distribution package created: space-is-left-$(shell date +%Y%m%d).tar.gz"
 
+# Create compressed distribution package
+dist-upx: release-upx
+	mkdir -p dist
+	cp $(TARGET) dist/
+	cp README.md dist/
+	echo "Space is Left - Game Engine (UPX Compressed)" > dist/VERSION.txt
+	echo "Version: 1.0.0" >> dist/VERSION.txt
+	echo "Build Date: $(shell date)" >> dist/VERSION.txt
+	tar -czf space-is-left-upx-$(shell date +%Y%m%d).tar.gz dist/
+	rm -rf dist/
+	echo "Compressed distribution package created: space-is-left-upx-$(shell date +%Y%m%d).tar.gz"
+
 # Create Windows distribution package
 dist-windows: windows-with-raylib
 	mkdir -p dist-win
@@ -165,6 +228,18 @@ dist-windows: windows-with-raylib
 	zip -r space-is-left-win-$(shell date +%Y%m%d).zip dist-win/
 	rm -rf dist-win/
 	echo "Windows distribution package created: space-is-left-win-$(shell date +%Y%m%d).zip"
+
+# Create compressed Windows distribution package
+dist-windows-upx: windows-with-raylib upx-windows-with-raylib
+	mkdir -p dist-win
+	cp $(TARGET).exe dist-win/
+	echo "@echo off" > dist-win/run.bat
+	echo "$(TARGET).exe" >> dist-win/run.bat
+	echo "pause" >> dist-win/run.bat
+	cp README.md dist-win/README.txt
+	zip -r space-is-left-win-upx-$(shell date +%Y%m%d).zip dist-win/
+	rm -rf dist-win/
+	echo "Compressed Windows distribution package created: space-is-left-win-upx-$(shell date +%Y%m%d).zip"
 
 # Development helpers
 format:
@@ -200,9 +275,19 @@ help:
 	@echo "  make test-windows - Test Windows exe with Wine"
 	@echo "  make all-platforms - Build for both Linux and Windows"
 	@echo ""
+	@echo "UPX Compression:"
+	@echo "  make upx          - Compress Linux binary with UPX"
+	@echo "  make upx-windows  - Compress Windows exe with UPX"
+	@echo "  make upx-windows-with-raylib - Compress Windows exe (with RayLib) with UPX"
+	@echo "  make upx-windows32 - Compress 32-bit Windows exe with UPX"
+	@echo "  make release-upx  - Build optimized and compressed Linux binary"
+	@echo "  make release-windows-upx - Build optimized and compressed Windows exe"
+	@echo ""
 	@echo "Distribution:"
 	@echo "  make dist         - Create distribution package"
+	@echo "  make dist-upx     - Create compressed distribution package"
 	@echo "  make dist-windows - Create Windows distribution package"
+	@echo "  make dist-windows-upx - Create compressed Windows distribution package"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make clean        - Remove all built files"
@@ -226,7 +311,8 @@ help:
 
 .PHONY: all windows windows-dynamic windows32 windows-with-raylib \
         debug release all-platforms run test-windows \
-        clean rebuild dist dist-windows format check \
+        upx upx-windows upx-windows-with-raylib upx-windows32 release-upx release-windows-upx \
+        clean rebuild dist dist-upx dist-windows dist-windows-upx format check \
         install-deps-ubuntu install-deps-fedora install-deps-arch \
         install-mingw-ubuntu install-mingw-fedora install-mingw-arch \
         download-raylib-windows gamepad-test run-gamepad-test help
