@@ -18,6 +18,7 @@ In Space is Left, you control a futuristic line rider that continuously moves fo
 - **M** - Return to main menu (when game over)
 - **1** - Select Easy difficulty (in menu)
 - **2** - Select Hardcore difficulty (in menu)
+- **S** - Toggle sound effects on/off
 - **ESC** - Exit game
 
 ### 🎮 Gamepad/Controller Support
@@ -82,6 +83,18 @@ The game fully supports USB gamepads and controllers! When a gamepad is connecte
 - **📦 Shrink (Orange)** - Reduces your line length
 - **⭐ Bonus Points (Gold)** - Extra score points
 
+## 🎵 Sound Effects
+
+The game features retro chiptune sound effects:
+- **Turning** - Short beep when steering left
+- **Pickup** - Rising tone when collecting powerups
+- **Loop Complete** - Victory chime when completing a full circle
+- **Power-ups** - Unique sounds for shields, boosts, and special items
+- **Game Over** - Descending tone when crashing
+- **Menu** - Navigation and selection sounds
+
+Sound can be toggled on/off at any time with the **S** key.
+
 ## 🏗️ Building from Source
 
 ### Requirements
@@ -142,6 +155,7 @@ Space is Left is built on a custom game engine with:
 - **Dual Camera Systems**: 3D orbit camera and isometric strategy camera
 - **Entity Component System**: Flexible entity management
 - **Particle System**: Dynamic visual effects
+- **Chiptune Sound Effects**: Retro-style beeps and boops for all interactions
 - **Modular Architecture**: Separated engine, rendering, input, and game logic
 - **Cross-platform**: Works on Linux, Windows, and macOS
 
