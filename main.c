@@ -1020,9 +1020,9 @@ void RenderOffscreenIndicators(GameState* game, EngineState* engine) {
         // Get screen position of powerup
         Vector2 screenPos = GetWorldToScreen(game->powerups[i].position, engine->camera);
 
-        // Check if off-screen
-        int screenWidth = engine->windowWidth;
-        int screenHeight = engine->windowHeight;
+        // Check if off-screen (use internal resolution dimensions when active)
+        int screenWidth = engine->useInternalResolution ? INTERNAL_RENDER_WIDTH : engine->windowWidth;
+        int screenHeight = engine->useInternalResolution ? INTERNAL_RENDER_HEIGHT : engine->windowHeight;
         int margin = 50;
 
         if (screenPos.x < -margin || screenPos.x > screenWidth + margin ||
@@ -1132,134 +1132,135 @@ void RenderOffscreenIndicators(GameState* game, EngineState* engine) {
 }
 
 void RenderUI(GameState* game, EngineState* engine) {
-    int screenWidth = engine->windowWidth;
-    int screenHeight = engine->windowHeight;
+    // Use internal resolution dimensions when active, otherwise use actual window size
+    int screenWidth = engine->useInternalResolution ? INTERNAL_RENDER_WIDTH : engine->windowWidth;
+    int screenHeight = engine->useInternalResolution ? INTERNAL_RENDER_HEIGHT : engine->windowHeight;
 
     // Show menu if in menu state
     if (game->inMenu) {
-        DrawText(GAME_TITLE, screenWidth / 2 - MeasureText(GAME_TITLE, 50) / 2, 100, 50, WHITE);
-        DrawText("You can only steer LEFT!", screenWidth / 2 - MeasureText("You can only steer LEFT!", 30) / 2, 160, 30, SKYBLUE);
+        DrawText(GAME_TITLE, screenWidth / 2 - MeasureText(GAME_TITLE, 30) / 2, 50, 30, WHITE);
+        DrawText("You can only steer LEFT!", screenWidth / 2 - MeasureText("You can only steer LEFT!", 18) / 2, 80, 18, SKYBLUE);
 
-        DrawText("SELECT DIFFICULTY", screenWidth / 2 - MeasureText("SELECT DIFFICULTY", 30) / 2, 250, 30, YELLOW);
+        DrawText("SELECT DIFFICULTY", screenWidth / 2 - MeasureText("SELECT DIFFICULTY", 20) / 2, 120, 20, YELLOW);
 
         // Easy option
         Color easyColor = (game->difficulty == DIFFICULTY_EASY) ? GREEN : WHITE;
         const char* easyText = (engine->activeGamepad >= 0) ? "[1/D-PAD LEFT] EASY" : "[1] EASY";
-        DrawText(easyText, screenWidth / 2 - 150, 320, 25, easyColor);
-        DrawText("Normal speed", screenWidth / 2 - 150, 350, 18, LIGHTGRAY);
-        DrawText("For beginners", screenWidth / 2 - 150, 370, 18, LIGHTGRAY);
+        DrawText(easyText, screenWidth / 2 - 120, 160, 16, easyColor);
+        DrawText("Normal speed", screenWidth / 2 - 120, 180, 12, LIGHTGRAY);
+        DrawText("For beginners", screenWidth / 2 - 120, 195, 12, LIGHTGRAY);
 
         // Hardcore option
         Color hardcoreColor = (game->difficulty == DIFFICULTY_HARDCORE) ? RED : WHITE;
         const char* hardcoreText = (engine->activeGamepad >= 0) ? "[2/D-PAD RIGHT] HARDCORE" : "[2] HARDCORE";
-        DrawText(hardcoreText, screenWidth / 2 + 20, 320, 25, hardcoreColor);
-        DrawText("2x speed!", screenWidth / 2 + 20, 350, 18, ORANGE);
-        DrawText("For experts", screenWidth / 2 + 20, 370, 18, ORANGE);
+        DrawText(hardcoreText, screenWidth / 2 + 20, 160, 16, hardcoreColor);
+        DrawText("2x speed!", screenWidth / 2 + 20, 180, 12, ORANGE);
+        DrawText("For experts", screenWidth / 2 + 20, 195, 12, ORANGE);
 
         // Start instruction
         const char* startText = (engine->activeGamepad >= 0) ? "Press ENTER or A to start" : "Press ENTER to start";
-        DrawText(startText, screenWidth / 2 - MeasureText(startText, 25) / 2, 450, 25, LIME);
+        DrawText(startText, screenWidth / 2 - MeasureText(startText, 16) / 2, 230, 16, LIME);
 
         // High scores
-        DrawText(TextFormat("Easy High Score: %d", game->highScore), screenWidth / 2 - 200, 520, 20, WHITE);
-        DrawText(TextFormat("Hardcore High Score: %d", game->highScoreHardcore), screenWidth / 2 + 20, 520, 20, WHITE);
+        DrawText(TextFormat("Easy High Score: %d", game->highScore), screenWidth / 2 - 150, 270, 14, WHITE);
+        DrawText(TextFormat("Hardcore High Score: %d", game->highScoreHardcore), screenWidth / 2 + 10, 270, 14, WHITE);
 
         // Show gamepad status
         if (engine->activeGamepad >= 0) {
             DrawText(TextFormat("Gamepad %d Connected", engine->activeGamepad + 1), 
-                    screenWidth / 2 - MeasureText("Gamepad 1 Connected", 16) / 2, 540, 16, LIME);
+                    screenWidth / 2 - MeasureText("Gamepad 1 Connected", 12) / 2, 295, 12, LIME);
         }
         
-        DrawText("Press ESC to exit", screenWidth / 2 - MeasureText("Press ESC to exit", 18) / 2, 570, 18, DARKGRAY);
+        DrawText("Press ESC to exit", screenWidth / 2 - MeasureText("Press ESC to exit", 12) / 2, 320, 12, DARKGRAY);
         return;
     }
 
     // Game title (smaller when playing)
-    DrawText(GAME_TITLE, screenWidth / 2 - MeasureText(GAME_TITLE, 30) / 2, 20, 30, WHITE);
+    DrawText(GAME_TITLE, screenWidth / 2 - MeasureText(GAME_TITLE, 20) / 2, 10, 20, WHITE);
     const char* diffText = game->difficulty == DIFFICULTY_HARDCORE ? "HARDCORE MODE" : "EASY MODE";
     Color diffColor = game->difficulty == DIFFICULTY_HARDCORE ? RED : GREEN;
-    DrawText(diffText, screenWidth / 2 - MeasureText(diffText, 20) / 2, 55, 20, diffColor);
+    DrawText(diffText, screenWidth / 2 - MeasureText(diffText, 14) / 2, 35, 14, diffColor);
 
     // Score
-    DrawText(TextFormat("Score: %d", (int)game->rider.score), 20, 100, 24, WHITE);
+    DrawText(TextFormat("Score: %d", (int)game->rider.score), 10, 60, 16, WHITE);
     int currentHighScore = (game->difficulty == DIFFICULTY_HARDCORE) ? game->highScoreHardcore : game->highScore;
     if (currentHighScore > 0) {
-        DrawText(TextFormat("High: %d", currentHighScore), 20, 130, 18, GOLD);
+        DrawText(TextFormat("High: %d", currentHighScore), 10, 80, 12, GOLD);
     }
 
     // Energy bar
     float energyPercent = game->rider.energy / MAX_ENERGY;
     Color energyColor = energyPercent > 0.3f ? GREEN : (energyPercent > 0.1f ? YELLOW : RED);
-    DrawRectangle(20, 160, 200, 20, DARKGRAY);
-    DrawRectangle(20, 160, (int)(200 * energyPercent), 20, energyColor);
-    DrawRectangleLines(20, 160, 200, 20, WHITE);
-    DrawText("ENERGY", 25, 162, 16, WHITE);
+    DrawRectangle(10, 100, 120, 12, DARKGRAY);
+    DrawRectangle(10, 100, (int)(120 * energyPercent), 12, energyColor);
+    DrawRectangleLines(10, 100, 120, 12, WHITE);
+    DrawText("ENERGY", 12, 101, 10, WHITE);
 
     // Boost indicator
     if (game->rider.boosted) {
-        DrawText("BOOST!", screenWidth / 2 - MeasureText("BOOST!", 40) / 2, 100, 40, YELLOW);
+        DrawText("BOOST!", screenWidth / 2 - MeasureText("BOOST!", 24) / 2, 60, 24, YELLOW);
     }
     
     // FPS counter
     if (game->showFPS) {
         int fps = GetFPS();
         Color fpsColor = fps >= 55 ? GREEN : (fps >= 30 ? YELLOW : RED);
-        DrawText(TextFormat("FPS: %d", fps), screenWidth - 100, 10, 20, fpsColor);
+        DrawText(TextFormat("FPS: %d", fps), screenWidth - 60, 5, 14, fpsColor);
     }
 
     // Shield indicator
     if (game->rider.shieldTimer > 0) {
-        DrawText(TextFormat("SHIELD: %.1fs", game->rider.shieldTimer), 20, 190, 18, GREEN);
+        DrawText(TextFormat("SHIELD: %.1fs", game->rider.shieldTimer), 10, 120, 12, GREEN);
     }
 
     // Segments count
-    DrawText(TextFormat("Length: %d", game->rider.segmentCount), 20, 220, 18, SKYBLUE);
+    DrawText(TextFormat("Length: %d", game->rider.segmentCount), 10, 135, 12, SKYBLUE);
 
     // Turns completed
     if (game->rider.turnsCompleted > 0) {
-        DrawText(TextFormat("Loops: %d", game->rider.turnsCompleted), 20, 250, 18, GOLD);
+        DrawText(TextFormat("Loops: %d", game->rider.turnsCompleted), 10, 150, 12, GOLD);
     }
 
     // Controls
     // Control hints - update based on gamepad connection
     if (engine->activeGamepad >= 0) {
-        DrawText("SPACE/MOUSE/A/RT/L-STICK: Turn Left", screenWidth - 350, screenHeight - 30, 16, LIGHTGRAY);
-        DrawText("LB/LT/L3/R3: Camera Zoom", screenWidth - 350, screenHeight - 50, 14, DARKGRAY);
+        DrawText("SPACE/MOUSE/A/RT/L-STICK: Turn Left", screenWidth - 220, screenHeight - 20, 10, LIGHTGRAY);
+        DrawText("LB/LT/L3/R3: Camera Zoom", screenWidth - 220, screenHeight - 32, 9, DARKGRAY);
     } else {
-        DrawText("SPACE or LEFT MOUSE: Turn Left", screenWidth - 300, screenHeight - 30, 16, LIGHTGRAY);
+        DrawText("SPACE or LEFT MOUSE: Turn Left", screenWidth - 180, screenHeight - 20, 10, LIGHTGRAY);
     }
     
     // Sound indicator
     DrawText(game->soundEnabled ? "Sound: ON (S to toggle)" : "Sound: OFF (S to toggle)", 
-             10, screenHeight - 30, 14, game->soundEnabled ? GREEN : DARKGRAY);
+             10, screenHeight - 20, 10, game->soundEnabled ? GREEN : DARKGRAY);
     
     // FPS toggle indicator
     DrawText(game->showFPS ? "FPS: ON (F to toggle)" : "FPS: OFF (F to toggle)",
-             10, screenHeight - 50, 14, game->showFPS ? GREEN : DARKGRAY);
+             10, screenHeight - 32, 10, game->showFPS ? GREEN : DARKGRAY);
 
     // Pause indicator
     if (game->paused && !game->gameOver) {
-        DrawText("PAUSED", screenWidth / 2 - MeasureText("PAUSED", 40) / 2, screenHeight / 2 - 20, 40, YELLOW);
+        DrawText("PAUSED", screenWidth / 2 - MeasureText("PAUSED", 24) / 2, screenHeight / 2 - 12, 24, YELLOW);
         const char* resumeText = (engine->activeGamepad >= 0) ? "Press P or START to resume" : "Press P to resume";
-        DrawText(resumeText, screenWidth / 2 - MeasureText(resumeText, 20) / 2, screenHeight / 2 + 30, 20, WHITE);
+        DrawText(resumeText, screenWidth / 2 - MeasureText(resumeText, 14) / 2, screenHeight / 2 + 20, 14, WHITE);
     }
 
     // Game over
     if (game->gameOver) {
         DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.7f));
-        DrawText("GAME OVER", screenWidth / 2 - MeasureText("GAME OVER", 50) / 2, screenHeight / 2 - 100, 50, RED);
+        DrawText("GAME OVER", screenWidth / 2 - MeasureText("GAME OVER", 30) / 2, screenHeight / 2 - 60, 30, RED);
         DrawText(TextFormat("Final Score: %d", (int)game->rider.score),
-                screenWidth / 2 - MeasureText(TextFormat("Final Score: %d", (int)game->rider.score), 30) / 2,
-                screenHeight / 2 - 30, 30, WHITE);
+                screenWidth / 2 - MeasureText(TextFormat("Final Score: %d", (int)game->rider.score), 20) / 2,
+                screenHeight / 2 - 20, 20, WHITE);
         const char* modeText = game->difficulty == DIFFICULTY_HARDCORE ? "HARDCORE MODE" : "EASY MODE";
         Color modeColor = game->difficulty == DIFFICULTY_HARDCORE ? ORANGE : GREEN;
-        DrawText(modeText, screenWidth / 2 - MeasureText(modeText, 20) / 2, screenHeight / 2 + 10, 20, modeColor);
-        DrawText("Press ENTER to Restart", screenWidth / 2 - MeasureText("Press ENTER to Restart", 20) / 2,
-                screenHeight / 2 + 40, 20, LIGHTGRAY);
-        DrawText("Press M for Menu", screenWidth / 2 - MeasureText("Press M for Menu", 20) / 2,
-                screenHeight / 2 + 65, 20, LIGHTGRAY);
-        DrawText("Press ESC to Exit", screenWidth / 2 - MeasureText("Press ESC to Exit", 20) / 2,
-                screenHeight / 2 + 90, 20, LIGHTGRAY);
+        DrawText(modeText, screenWidth / 2 - MeasureText(modeText, 14) / 2, screenHeight / 2 + 5, 14, modeColor);
+        DrawText("Press ENTER to Restart", screenWidth / 2 - MeasureText("Press ENTER to Restart", 14) / 2,
+                screenHeight / 2 + 30, 14, LIGHTGRAY);
+        DrawText("Press M for Menu", screenWidth / 2 - MeasureText("Press M for Menu", 14) / 2,
+                screenHeight / 2 + 50, 14, LIGHTGRAY);
+        DrawText("Press ESC to Exit", screenWidth / 2 - MeasureText("Press ESC to Exit", 14) / 2,
+                screenHeight / 2 + 70, 14, LIGHTGRAY);
     }
 }
 
@@ -1545,16 +1546,19 @@ int main(int argc, char* argv[]) {
             RenderParticles(game);
         }
 
-        // End 3D rendering
-        Engine_EndFrame(engine);
+        // End 3D mode to begin 2D UI rendering
+        Engine_End3D(engine);
 
-        // Render UI overlay (after EndFrame to draw on top)
+        // Render UI overlay (2D elements)
         RenderUI(game, engine);
-
+        
         // Render off-screen indicators for energy pickups (skip if in menu)
         if (game->rider.alive && !game->paused && !game->gameOver && !game->inMenu) {
             RenderOffscreenIndicators(game, engine);
         }
+
+        // Finalize frame and draw to screen
+        Engine_EndFrame(engine);
     }
 
     // Save high score if needed

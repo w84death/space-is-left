@@ -8,7 +8,34 @@ void Input_Update(EngineState* engine) {
     if (!engine) return;
     
     // Update mouse state
-    engine->mousePosition = GetMousePosition();
+    Vector2 rawMousePos = GetMousePosition();
+    
+    // Scale mouse position if using internal resolution
+    if (engine->useInternalResolution) {
+        if (engine->maintainAspectRatio) {
+            // Convert from screen space to render texture space with aspect ratio letterboxing
+            float scaleX = (float)INTERNAL_RENDER_WIDTH / engine->destRect.width;
+            float scaleY = (float)INTERNAL_RENDER_HEIGHT / engine->destRect.height;
+            
+            rawMousePos.x = (rawMousePos.x - engine->destRect.x) * scaleX;
+            rawMousePos.y = (rawMousePos.y - engine->destRect.y) * scaleY;
+        } else {
+            // Convert from screen space to render texture space (stretched full screen)
+            float scaleX = (float)INTERNAL_RENDER_WIDTH / (float)engine->windowWidth;
+            float scaleY = (float)INTERNAL_RENDER_HEIGHT / (float)engine->windowHeight;
+            
+            rawMousePos.x = rawMousePos.x * scaleX;
+            rawMousePos.y = rawMousePos.y * scaleY;
+        }
+        
+        // Clamp to internal resolution bounds
+        if (rawMousePos.x < 0) rawMousePos.x = 0;
+        if (rawMousePos.x > INTERNAL_RENDER_WIDTH) rawMousePos.x = INTERNAL_RENDER_WIDTH;
+        if (rawMousePos.y < 0) rawMousePos.y = 0;
+        if (rawMousePos.y > INTERNAL_RENDER_HEIGHT) rawMousePos.y = INTERNAL_RENDER_HEIGHT;
+    }
+    
+    engine->mousePosition = rawMousePos;
     engine->mouseDelta = GetMouseDelta();
     engine->mouseWheel = GetMouseWheelMove();
     

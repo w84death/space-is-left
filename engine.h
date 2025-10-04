@@ -13,9 +13,13 @@
 #define ENGINE_NAME "Space is Left Engine"
 
 // Window settings
-#define DEFAULT_WINDOW_WIDTH 1024
-#define DEFAULT_WINDOW_HEIGHT 768
+#define DEFAULT_WINDOW_WIDTH 1920
+#define DEFAULT_WINDOW_HEIGHT 1080
 #define DEFAULT_FPS 60
+
+// Internal rendering resolution
+#define INTERNAL_RENDER_WIDTH 960
+#define INTERNAL_RENDER_HEIGHT 540
 
 // Camera settings
 #define CAMERA_MOUSE_SENSITIVITY 0.003f
@@ -92,28 +96,28 @@ typedef struct Entity {
     EntityType type;
     bool active;
     bool selected;
-    
+
     // Transform
     Vector3 position;
     Vector3 rotation;
     Vector3 scale;
-    
+
     // Physics
     Vector3 velocity;
     Vector3 acceleration;
     float mass;
-    
+
     // Visual
     Color color;
     Model* model;  // Optional 3D model
     Texture2D* texture;  // Optional texture
-    
+
     // Gameplay
     float health;
     float maxHealth;
     int team;
     int groupId;  // Control group
-    
+
     // Custom data pointer for game-specific data
     void* customData;
 } Entity;
@@ -132,21 +136,21 @@ typedef struct {
     int windowWidth;
     int windowHeight;
     const char* windowTitle;
-    
+
     // Camera
     Camera3D camera;
     ViewMode viewMode;
     OrbitCamera orbitCamera;
     IsometricCamera isoCamera;
-    
+
     // Entities
     Entity entities[MAX_ENTITIES];
     int entityCount;
     int nextEntityId;
-    
+
     // Control groups
     ControlGroup controlGroups[MAX_CONTROL_GROUPS];
-    
+
     // Input state
     bool mouseLeftPressed;
     bool mouseRightPressed;
@@ -154,7 +158,7 @@ typedef struct {
     Vector2 mousePosition;
     Vector2 mouseDelta;
     float mouseWheel;
-    
+
     // Gamepad state
     int activeGamepad;  // Currently active gamepad ID (-1 if none)
     bool gamepadConnected[MAX_GAMEPADS];
@@ -162,15 +166,23 @@ typedef struct {
     Vector2 gamepadRightStick[MAX_GAMEPADS];
     float gamepadLeftTrigger[MAX_GAMEPADS];
     float gamepadRightTrigger[MAX_GAMEPADS];
-    
+
     // Engine state
     bool running;
     float deltaTime;
     float totalTime;
-    
+
     // Debug/display options
     bool showDebugInfo;
     bool showUI;
+
+    // Low resolution rendering
+    RenderTexture2D renderTarget;  // Internal render texture at low resolution
+    bool useInternalResolution;    // Whether to use internal resolution rendering
+    bool showScanlines;            // Whether to show CRT scanline effect
+    bool maintainAspectRatio;      // Whether to maintain aspect ratio (letterbox) or stretch to fill
+    Rectangle sourceRect;           // Source rectangle for render texture
+    Rectangle destRect;             // Destination rectangle for fullscreen
 } EngineState;
 
 // =====================================
@@ -183,6 +195,7 @@ void Engine_Shutdown(EngineState* engine);
 
 // Main loop
 void Engine_BeginFrame(EngineState* engine);
+void Engine_End3D(EngineState* engine);  // End 3D mode, begin 2D UI rendering
 void Engine_EndFrame(EngineState* engine);
 bool Engine_ShouldClose(EngineState* engine);
 

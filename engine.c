@@ -9,6 +9,10 @@
 // =====================================
 
 EngineState* Engine_Init(int width, int height, const char* title) {
+    // Suppress unused parameter warnings (using fullscreen mode instead)
+    (void)width;
+    (void)height;
+    
     // Allocate engine state
     EngineState* engine = (EngineState*)calloc(1, sizeof(EngineState));
     if (!engine) {
@@ -16,19 +20,51 @@ EngineState* Engine_Init(int width, int height, const char* title) {
         return NULL;
     }
     
-    // Initialize window
+    // Initialize window first, then go fullscreen
+    engine->windowTitle = title ? title : ENGINE_NAME;
     engine->windowWidth = width > 0 ? width : DEFAULT_WINDOW_WIDTH;
     engine->windowHeight = height > 0 ? height : DEFAULT_WINDOW_HEIGHT;
-    engine->windowTitle = title ? title : ENGINE_NAME;
     
+    SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(engine->windowWidth, engine->windowHeight, engine->windowTitle);
     SetTargetFPS(DEFAULT_FPS);
+    
+    // Now toggle to fullscreen after window is created
+    ToggleFullscreen();
+    
+    // Get actual fullscreen dimensions
+    if (IsWindowFullscreen()) {
+        int monitor = GetCurrentMonitor();
+        engine->windowWidth = GetMonitorWidth(monitor);
+        engine->windowHeight = GetMonitorHeight(monitor);
+    } else {
+        engine->windowWidth = GetScreenWidth();
+        engine->windowHeight = GetScreenHeight();
+    }
+    
+    // Initialize low-resolution render texture
+    engine->renderTarget = LoadRenderTexture(INTERNAL_RENDER_WIDTH, INTERNAL_RENDER_HEIGHT);
+    SetTextureFilter(engine->renderTarget.texture, TEXTURE_FILTER_POINT); // Pixelated look
+    SetTextureWrap(engine->renderTarget.texture, TEXTURE_WRAP_CLAMP);  // Prevent edge bleeding
+    engine->useInternalResolution = true;  // Enable internal resolution by default
+    engine->maintainAspectRatio = false;  // Start with stretched full screen
+    
+    // Set up source and destination rectangles for scaling
+    engine->sourceRect = (Rectangle){ 0, 0, INTERNAL_RENDER_WIDTH, INTERNAL_RENDER_HEIGHT };
+    
+    // Set destination rectangle to fill entire screen
+    engine->destRect = (Rectangle){
+        0,
+        0,
+        (float)engine->windowWidth,
+        (float)engine->windowHeight
+    };
     
     // Initialize camera
     engine->camera.position = (Vector3){10.0f, 10.0f, 10.0f};
     engine->camera.target = (Vector3){0.0f, 0.0f, 0.0f};
     engine->camera.up = (Vector3){0.0f, 1.0f, 0.0f};
-    engine->camera.fovy = 45.0f;
+    engine->camera.fovy = 60.0f;  // Adjusted for wide-screen aspect ratio
     engine->camera.projection = CAMERA_PERSPECTIVE;
     
     // Initialize camera controllers
@@ -65,6 +101,7 @@ EngineState* Engine_Init(int width, int height, const char* title) {
     // Set default display options
     engine->showDebugInfo = true;
     engine->showUI = true;
+    engine->showScanlines = false;  // Scanlines off by default
     
     engine->running = true;
     
@@ -73,6 +110,11 @@ EngineState* Engine_Init(int width, int height, const char* title) {
 
 void Engine_Shutdown(EngineState* engine) {
     if (!engine) return;
+    
+    // Unload render texture
+    if (engine->useInternalResolution) {
+        UnloadRenderTexture(engine->renderTarget);
+    }
     
     // Clean up entities with custom data
     for (int i = 0; i < MAX_ENTITIES; i++) {
@@ -95,6 +137,111 @@ void Engine_BeginFrame(EngineState* engine) {
     // Update input state
     Input_Update(engine);
     
+    // Toggle fullscreen with Alt+Enter or just F11
+    if ((IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_ENTER)) || IsKeyPressed(KEY_F11)) {
+        ToggleFullscreen();
+        
+        // Wait a frame for the window to resize
+        if (IsWindowFullscreen()) {
+            int monitor = GetCurrentMonitor();
+            engine->windowWidth = GetMonitorWidth(monitor);
+            engine->windowHeight = GetMonitorHeight(monitor);
+        } else {
+            engine->windowWidth = DEFAULT_WINDOW_WIDTH;
+            engine->windowHeight = DEFAULT_WINDOW_HEIGHT;
+        }
+        
+        // Recalculate destination rectangle based on aspect ratio mode
+        if (engine->maintainAspectRatio) {
+            float scale = fminf((float)engine->windowWidth / INTERNAL_RENDER_WIDTH,
+                               (float)engine->windowHeight / INTERNAL_RENDER_HEIGHT);
+            float scaledWidth = INTERNAL_RENDER_WIDTH * scale;
+            float scaledHeight = INTERNAL_RENDER_HEIGHT * scale;
+            engine->destRect = (Rectangle){
+                (engine->windowWidth - scaledWidth) / 2,
+                (engine->windowHeight - scaledHeight) / 2,
+                scaledWidth,
+                scaledHeight
+            };
+        } else {
+            engine->destRect = (Rectangle){
+                0,
+                0,
+                (float)engine->windowWidth,
+                (float)engine->windowHeight
+            };
+        }
+    }
+    
+    // Toggle internal resolution with F1
+    if (IsKeyPressed(KEY_F1)) {
+        engine->useInternalResolution = !engine->useInternalResolution;
+        
+        // Update destination rectangle for new window size in case it changed
+        if (engine->useInternalResolution) {
+            // Get current screen dimensions
+            int currentWidth = GetScreenWidth();
+            int currentHeight = GetScreenHeight();
+            
+            // Recalculate destination rectangle based on aspect ratio mode
+            if (engine->maintainAspectRatio) {
+                float scale = fminf((float)currentWidth / INTERNAL_RENDER_WIDTH,
+                                   (float)currentHeight / INTERNAL_RENDER_HEIGHT);
+                float scaledWidth = INTERNAL_RENDER_WIDTH * scale;
+                float scaledHeight = INTERNAL_RENDER_HEIGHT * scale;
+                engine->destRect = (Rectangle){
+                    (currentWidth - scaledWidth) / 2,
+                    (currentHeight - scaledHeight) / 2,
+                    scaledWidth,
+                    scaledHeight
+                };
+            } else {
+                engine->destRect = (Rectangle){
+                    0,
+                    0,
+                    (float)currentWidth,
+                    (float)currentHeight
+                };
+            }
+            
+            engine->windowWidth = currentWidth;
+            engine->windowHeight = currentHeight;
+        }
+    }
+    
+    // Toggle scanline effect with F2
+    if (IsKeyPressed(KEY_F2)) {
+        engine->showScanlines = !engine->showScanlines;
+    }
+    
+    // Toggle aspect ratio mode with F3
+    if (IsKeyPressed(KEY_F3)) {
+        engine->maintainAspectRatio = !engine->maintainAspectRatio;
+        
+        // Recalculate destination rectangle based on aspect ratio mode
+        if (engine->maintainAspectRatio) {
+            // Calculate destination rectangle to maintain aspect ratio
+            float scale = fminf((float)engine->windowWidth / INTERNAL_RENDER_WIDTH,
+                               (float)engine->windowHeight / INTERNAL_RENDER_HEIGHT);
+            float scaledWidth = INTERNAL_RENDER_WIDTH * scale;
+            float scaledHeight = INTERNAL_RENDER_HEIGHT * scale;
+            engine->destRect = (Rectangle){
+                (engine->windowWidth - scaledWidth) / 2,
+                (engine->windowHeight - scaledHeight) / 2,
+                scaledWidth,
+                scaledHeight
+            };
+        } else {
+            // Stretch to fill entire screen
+            engine->destRect = (Rectangle){
+                0,
+                0,
+                (float)engine->windowWidth,
+                (float)engine->windowHeight
+            };
+        }
+    }
+    
     // Update camera based on current mode
     switch (engine->viewMode) {
         case VIEW_MODE_ORBIT:
@@ -111,20 +258,30 @@ void Engine_BeginFrame(EngineState* engine) {
     Camera_Apply(engine);
     
     // Begin drawing
-    BeginDrawing();
-    ClearBackground((Color){32, 32, 32, 255});
+    if (engine->useInternalResolution) {
+        // Begin drawing to render texture
+        BeginTextureMode(engine->renderTarget);
+        ClearBackground((Color){32, 32, 32, 255});
+        BeginMode3D(engine->camera);
+    } else {
+        // Normal drawing
+        BeginDrawing();
+        ClearBackground((Color){32, 32, 32, 255});
+        BeginMode3D(engine->camera);
+    }
+}
+
+void Engine_End3D(EngineState* engine) {
+    if (!engine) return;
     
-    BeginMode3D(engine->camera);
+    // End 3D mode
+    EndMode3D();
 }
 
 void Engine_EndFrame(EngineState* engine) {
     if (!engine) return;
     
-    // Render debug visuals
-    
-    EndMode3D();
-    
-    // Render 2D UI elements
+    // Render 2D UI elements (to render texture if using internal resolution)
     if (engine->isoCamera.selecting) {
         Render_SelectionBox(engine->isoCamera.selectionStart, engine->isoCamera.selectionEnd);
     }
@@ -133,7 +290,35 @@ void Engine_EndFrame(EngineState* engine) {
         Render_DebugInfo(engine);
     }
     
-    EndDrawing();
+    if (engine->useInternalResolution) {
+        // End render texture mode
+        EndTextureMode();
+        
+        // Now draw the render texture to the actual screen
+        BeginDrawing();
+        ClearBackground(BLACK);  // Black letterboxing
+        
+        // Draw the render texture scaled up (flip Y coordinate for correct orientation)
+        Rectangle flippedSource = { 0, 0, INTERNAL_RENDER_WIDTH, -INTERNAL_RENDER_HEIGHT };
+        DrawTexturePro(engine->renderTarget.texture,
+                      flippedSource,
+                      engine->destRect,
+                      (Vector2){0, 0},
+                      0.0f,
+                      WHITE);
+        
+        // Optional: Add scanline effect for retro CRT look
+        if (engine->useInternalResolution && engine->showScanlines) {
+            for (int y = 0; y < engine->windowHeight; y += 2) {
+                DrawRectangle(0, y, engine->windowWidth, 1, (Color){0, 0, 0, 30});
+            }
+        }
+        
+        EndDrawing();
+    } else {
+        // Normal ending
+        EndDrawing();
+    }
 }
 
 bool Engine_ShouldClose(EngineState* engine) {
