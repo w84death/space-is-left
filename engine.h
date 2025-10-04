@@ -169,8 +169,6 @@ typedef struct {
     float totalTime;
     
     // Debug/display options
-    bool showGrid;
-    bool showAxes;
     bool showDebugInfo;
     bool showUI;
 } EngineState;
@@ -252,8 +250,6 @@ void Input_UpdateGamepads(EngineState* engine);
 // Rendering Functions
 // =====================================
 
-void Render_Grid(float size, int divisions);
-void Render_Axes(float size);
 void Render_SelectionBox(Vector2 start, Vector2 end);
 void Render_DebugInfo(EngineState* engine);
 

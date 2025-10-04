@@ -41,14 +41,6 @@ void Input_Update(EngineState* engine) {
     }
     
     // Toggle display options (keyboard or gamepad)
-    if (IsKeyPressed(KEY_G) || 
-        (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_LEFT_FACE_LEFT))) {
-        engine->showGrid = !engine->showGrid;
-    }
-    if (IsKeyPressed(KEY_X) || 
-        (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_LEFT_FACE_RIGHT))) {
-        engine->showAxes = !engine->showAxes;
-    }
     if (IsKeyPressed(KEY_I) || 
         (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_MIDDLE_LEFT))) {
         engine->showDebugInfo = !engine->showDebugInfo;

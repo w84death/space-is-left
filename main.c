@@ -1069,8 +1069,6 @@ int main(int argc, char* argv[]) {
     engine->isoCamera.targetTarget = (Vector3){0, 0, 0};
 
     // Disable some default debug displays for cleaner look
-    engine->showGrid = false;
-    engine->showAxes = false;
     engine->showDebugInfo = false;
 
     // Main game loop
@@ -1121,10 +1119,7 @@ int main(int argc, char* argv[]) {
             RenderStars(game);
             RenderArena(game);
 
-            // Enable grid for space effect
-            if (engine->showGrid) {
-                Render_Grid(ARENA_SIZE, 20);
-            }
+
 
             // Render game objects
             RenderPowerups(game);

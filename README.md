@@ -49,9 +49,6 @@ The game fully supports USB gamepads and controllers! When a gamepad is connecte
 - **Mouse Wheel** - Zoom in/out
 - **Middle Mouse + Drag** - Pan camera
 - **WASD/Arrow Keys** - Move camera (Isometric mode)
-- **R** - Reset camera position
-- **G** - Toggle grid
-- **X** - Toggle axes
 - **I** - Toggle debug info
 
 #### Gamepad Camera Controls

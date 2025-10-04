@@ -63,8 +63,6 @@ EngineState* Engine_Init(int width, int height, const char* title) {
     }
     
     // Set default display options
-    engine->showGrid = true;
-    engine->showAxes = true;
     engine->showDebugInfo = true;
     engine->showUI = true;
     
@@ -123,13 +121,6 @@ void Engine_EndFrame(EngineState* engine) {
     if (!engine) return;
     
     // Render debug visuals
-    if (engine->showGrid) {
-        Render_Grid(50.0f, 50);
-    }
-    
-    if (engine->showAxes) {
-        Render_Axes(5.0f);
-    }
     
     EndMode3D();
     

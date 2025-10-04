@@ -5,37 +5,9 @@
 // Rendering Utilities Implementation
 // =====================================
 
-void Render_Grid(float size, int divisions) {
-    float spacing = size / divisions;
-    float halfSize = size * 0.5f;
-    
-    // Draw grid lines
-    for (int i = 0; i <= divisions; i++) {
-        float pos = -halfSize + i * spacing;
-        
-        // X-axis lines (red tint for center)
-        Color color = (i == divisions / 2) ? (Color){100, 50, 50, 255} : (Color){50, 50, 50, 255};
-        DrawLine3D((Vector3){pos, 0, -halfSize}, (Vector3){pos, 0, halfSize}, color);
-        
-        // Z-axis lines (blue tint for center)
-        color = (i == divisions / 2) ? (Color){50, 50, 100, 255} : (Color){50, 50, 50, 255};
-        DrawLine3D((Vector3){-halfSize, 0, pos}, (Vector3){halfSize, 0, pos}, color);
-    }
-}
 
-void Render_Axes(float size) {
-    // X-axis (Red)
-    DrawLine3D((Vector3){0, 0, 0}, (Vector3){size, 0, 0}, RED);
-    DrawCube((Vector3){size, 0, 0}, 0.1f, 0.1f, 0.1f, RED);
-    
-    // Y-axis (Green)
-    DrawLine3D((Vector3){0, 0, 0}, (Vector3){0, size, 0}, GREEN);
-    DrawCube((Vector3){0, size, 0}, 0.1f, 0.1f, 0.1f, GREEN);
-    
-    // Z-axis (Blue)
-    DrawLine3D((Vector3){0, 0, 0}, (Vector3){0, 0, size}, BLUE);
-    DrawCube((Vector3){0, 0, size}, 0.1f, 0.1f, 0.1f, BLUE);
-}
+
+
 
 void Render_SelectionBox(Vector2 start, Vector2 end) {
     // Calculate box dimensions
@@ -113,7 +85,7 @@ void Render_DebugInfo(EngineState* engine) {
     } else {
         DrawText("TAB: Switch Camera | WASD: Move | Mouse Wheel: Zoom", 10, y, fontSize, DARKGRAY);
         y += lineHeight;
-        DrawText("G: Grid | X: Axes | I: Info | ESC: Exit", 10, y, fontSize, DARKGRAY);
+        DrawText("I: Info | ESC: Exit", 10, y, fontSize, DARKGRAY);
     }
     y += lineHeight;
     
