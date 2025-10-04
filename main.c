@@ -271,9 +271,8 @@ void UpdateLineRider(GameState* game, EngineState* engine) {
     
     // Add gamepad controls with analog support
     if (engine->activeGamepad >= 0) {
-        // Digital controls (full speed)
-        if (IsGamepadButtonDown(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN) ||  // A button
-            IsGamepadButtonDown(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_TRIGGER_1)) {    // R1/RB
+        // Digital controls (full speed) - A button only
+        if (IsGamepadButtonDown(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) {  // A button
             turnRate = 1.0f;
         }
         
@@ -866,6 +865,7 @@ void RenderUI(GameState* game, EngineState* engine) {
     // Control hints - update based on gamepad connection
     if (engine->activeGamepad >= 0) {
         DrawText("SPACE/MOUSE/A/RT/L-STICK: Turn Left", screenWidth - 350, screenHeight - 30, 16, LIGHTGRAY);
+        DrawText("LB/LT/L3/R3: Camera Zoom", screenWidth - 350, screenHeight - 50, 14, DARKGRAY);
     } else {
         DrawText("SPACE or LEFT MOUSE: Turn Left", screenWidth - 300, screenHeight - 30, 16, LIGHTGRAY);
     }

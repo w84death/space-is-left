@@ -105,8 +105,20 @@ void Render_DebugInfo(EngineState* engine) {
     }
     
     // Controls hint
-    y = engine->windowHeight - 60;
-    DrawText("TAB: Switch Camera | WASD: Move | Mouse Wheel: Zoom", 10, y, fontSize, DARKGRAY);
+    y = engine->windowHeight - 80;
+    if (engine->activeGamepad >= 0) {
+        DrawText("Gamepad Camera: L-Stick/D-Pad: Move | R-Stick: Rotate | LB/LT/L3/R3: Zoom", 10, y, fontSize, DARKGRAY);
+        y += lineHeight;
+        DrawText("Select: Reset | Y: Switch Camera | Start: Pause", 10, y, fontSize, DARKGRAY);
+    } else {
+        DrawText("TAB: Switch Camera | WASD: Move | Mouse Wheel: Zoom", 10, y, fontSize, DARKGRAY);
+        y += lineHeight;
+        DrawText("G: Grid | X: Axes | I: Info | ESC: Exit", 10, y, fontSize, DARKGRAY);
+    }
     y += lineHeight;
-    DrawText("G: Grid | X: Axes | I: Info | ESC: Exit", 10, y, fontSize, DARKGRAY);
+    
+    // Show gamepad connection status
+    if (engine->activeGamepad >= 0) {
+        DrawText(TextFormat("Gamepad %d Connected", engine->activeGamepad + 1), 10, y, fontSize, GREEN);
+    }
 }

@@ -33,7 +33,6 @@ The game fully supports USB gamepads and controllers! When a gamepad is connecte
 
 #### Gameplay Controls
 - **A Button** - Turn left (digital control)
-- **Right Bumper (RB/R1)** - Turn left (digital control)
 - **Right Trigger (RT/R2)** - Turn left (analog - variable turn speed)
 - **Left Stick (Left)** - Turn left (analog - variable turn speed)
 - **Y Button** - Switch camera modes
@@ -45,12 +44,25 @@ The game fully supports USB gamepads and controllers! When a gamepad is connecte
 - **Multi-Input**: Keyboard, mouse, and gamepad controls work simultaneously
 
 ### Camera Controls
+
+#### Keyboard & Mouse
 - **Mouse Wheel** - Zoom in/out
 - **Middle Mouse + Drag** - Pan camera
 - **WASD/Arrow Keys** - Move camera (Isometric mode)
+- **R** - Reset camera position
 - **G** - Toggle grid
 - **X** - Toggle axes
 - **I** - Toggle debug info
+
+#### Gamepad Camera Controls
+- **Left Stick / D-Pad** - Pan camera / Move in isometric mode
+- **Right Stick** - Rotate camera (orbit mode) / Alternative pan (isometric mode)
+- **Left Bumper (LB/L1)** - Zoom in
+- **Left Trigger (LT/L2)** - Zoom out (analog control)
+- **Left Stick Button (L3)** - Alternative zoom in
+- **Right Stick Button (R3)** - Alternative zoom out
+- **Select/Back Button** - Reset camera position
+- **Left Bumper (hold)** - Speed boost for camera movement
 
 ### Gameplay
 1. Choose your difficulty from the main menu:

@@ -76,6 +76,14 @@ all-platforms: all windows
 run: $(TARGET)
 	./$(TARGET)
 
+# Build gamepad test utility
+gamepad-test: tools/gamepad_test.c
+	$(CC) tools/gamepad_test.c -o tools/gamepad_test $(CFLAGS) $(LIBS)
+
+# Run gamepad test utility
+run-gamepad-test: gamepad-test
+	./tools/gamepad_test
+
 # Test Windows executable with Wine
 test-windows: windows
 	@command -v wine >/dev/null 2>&1 || { \
@@ -91,6 +99,7 @@ test-windows: windows
 clean:
 	rm -f $(TARGET) $(TARGET).exe $(TARGET)32.exe $(OBJECTS)
 	rm -rf lib/
+	rm -f tools/gamepad_test
 
 # Clean and rebuild
 rebuild: clean all
@@ -200,6 +209,8 @@ help:
 	@echo "  make rebuild      - Clean and rebuild"
 	@echo "  make format       - Format code with clang-format"
 	@echo "  make check        - Run static analysis with cppcheck"
+	@echo "  make gamepad-test - Build gamepad test utility"
+	@echo "  make run-gamepad-test - Run gamepad test utility"
 	@echo ""
 	@echo "Dependencies:"
 	@echo "  make install-deps-ubuntu  - Install RayLib on Ubuntu/Debian"
@@ -218,4 +229,4 @@ help:
         clean rebuild dist dist-windows format check \
         install-deps-ubuntu install-deps-fedora install-deps-arch \
         install-mingw-ubuntu install-mingw-fedora install-mingw-arch \
-        download-raylib-windows help
+        download-raylib-windows gamepad-test run-gamepad-test help
