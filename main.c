@@ -1011,122 +1011,135 @@ void RenderArena(GameState* game) {
     }
 }
 
-void RenderOffscreenIndicators(GameState* game, EngineState* engine) {
-    // Draw indicators for off-screen energy pickups
+void RenderPickupIndicators(GameState* game, EngineState* engine) {
+    // This function handles both ON-SCREEN and OFF-SCREEN indicators for energy pickups.
     for (int i = 0; i < 20; i++) {
-        if (!game->powerups[i].active) continue;
-        if (game->powerups[i].type != POWERUP_ENERGY) continue;
+        if (!game->powerups[i].active || game->powerups[i].type != POWERUP_ENERGY) {
+            continue;
+        }
 
-        // Get screen position of powerup
+        // Get actual render dimensions and center
+        int renderWidth = engine->useInternalResolution ? engine->internalWidth : engine->windowWidth;
+        int renderHeight = engine->useInternalResolution ? engine->internalHeight : engine->windowHeight;
+        float centerX = renderWidth / 2.0f;
+        float centerY = renderHeight / 2.0f;
+
+        // Get the 3D -> 2D projection of the pickup's center
         Vector2 screenPos = GetWorldToScreen(game->powerups[i].position, engine->camera);
 
-        // Check if off-screen (use internal resolution dimensions when active)
-        int screenWidth = engine->useInternalResolution ? engine->internalWidth : engine->windowWidth;
-        int screenHeight = engine->useInternalResolution ? engine->internalHeight : engine->windowHeight;
-        int margin = 50;
+        // Check if the pickup is in front of the camera
+        Vector3 toPowerup = Vector3Subtract(game->powerups[i].position, engine->camera.position);
+        Vector3 cameraForward = Vector3Normalize(Vector3Subtract(engine->camera.target, engine->camera.position));
+        float dotProduct = Vector3DotProduct(Vector3Normalize(toPowerup), cameraForward);
 
-        if (screenPos.x < -margin || screenPos.x > screenWidth + margin ||
-            screenPos.y < -margin || screenPos.y > screenHeight + margin) {
+        // Determine if the pickup's center is within the visible screen area
+        bool isOnScreen = (dotProduct > 0.0f &&
+                           screenPos.x > 0 && screenPos.x < renderWidth &&
+                           screenPos.y > 0 && screenPos.y < renderHeight);
 
-            // Calculate direction from screen center to powerup
-            float centerX = screenWidth / 2.0f;
-            float centerY = screenHeight / 2.0f;
-            float dx = screenPos.x - centerX;
-            float dy = screenPos.y - centerY;
+        // ===================================================================
+        // CASE 1: ON-SCREEN INDICATOR (This logic is correct)
+        // ===================================================================
+        if (isOnScreen) {
+            float energyPercent = game->rider.energy / MAX_ENERGY;
+            Color arrowColor = SKYBLUE;
+            if (energyPercent < 0.2f) arrowColor = RED;
+            else if (energyPercent < 0.4f) arrowColor = ORANGE;
+            else if (energyPercent < 0.6f) arrowColor = YELLOW;
 
-            // Normalize direction
+            float pulse = sinf(game->gameTime * 5.0f) * 5.0f + 10.0f;
+            arrowColor.a = 200;
+
+            float arrowSize = 15.0f;
+            Vector2 arrowTip = { screenPos.x, screenPos.y - pulse };
+            Vector2 arrowBase1 = { arrowTip.x - arrowSize / 2.0f, arrowTip.y - arrowSize };
+            Vector2 arrowBase2 = { arrowTip.x + arrowSize / 2.0f, arrowTip.y - arrowSize };
+
+            DrawTriangle(arrowTip, arrowBase1, arrowBase2, arrowColor);
+            DrawTriangleLines(arrowTip, arrowBase1, arrowBase2, Fade(BLACK, 0.5f));
+
+        }
+        // ===================================================================
+        // CASE 2: OFF-SCREEN INDICATOR (Revised for consistency)
+        // ===================================================================
+        else {
+            // Use one consistent, reliable method for ALL off-screen objects.
+            // Manually project the direction onto the camera's plane. This avoids
+            // inconsistencies from using GetWorldToScreen for positioning.
+            Matrix viewMatrix = GetCameraMatrix(engine->camera);
+            Matrix invViewMatrix = MatrixInvert(viewMatrix);
+            Vector3 camRight = { invViewMatrix.m0, invViewMatrix.m1, invViewMatrix.m2 };
+            Vector3 camUp    = { invViewMatrix.m4, invViewMatrix.m5, invViewMatrix.m6 };
+
+            float rightDot = Vector3DotProduct(toPowerup, camRight);
+            float upDot = Vector3DotProduct(toPowerup, camUp);
+
+            // For objects in front but off-screen, the direction might need to be flipped.
+            // When dotProduct is positive, rightDot/upDot correctly map the direction.
+            // We only need to account for the screen's inverted Y-axis.
+            float dx = rightDot;
+            float dy = -upDot;
+
+            // --- Clamping and drawing logic (This part is correct) ---
             float dist = sqrtf(dx * dx + dy * dy);
             if (dist < 0.001f) continue;
             dx /= dist;
             dy /= dist;
 
-            // Calculate maximum distance from center to edge
-            float maxDistX = (screenWidth / 2.0f) - margin;
-            float maxDistY = (screenHeight / 2.0f) - margin;
+            int edgeMargin = 30;
+            float maxDistX = (renderWidth / 2.0f) - edgeMargin;
+            float maxDistY = (renderHeight / 2.0f) - edgeMargin;
 
-            // Find the scale factor to reach the edge
-            float scaleX = (dx != 0) ? maxDistX / fabsf(dx) : 99999.0f;
-            float scaleY = (dy != 0) ? maxDistY / fabsf(dy) : 99999.0f;
+            float scaleX = (fabsf(dx) > 0.001f) ? maxDistX / fabsf(dx) : 99999.0f;
+            float scaleY = (fabsf(dy) > 0.001f) ? maxDistY / fabsf(dy) : 99999.0f;
             float scale = fminf(scaleX, scaleY);
 
-            // Calculate edge position
             float edgeX = centerX + dx * scale;
             float edgeY = centerY + dy * scale;
 
-            // Get angle for arrow
+            // ... (Rest of drawing code is fine) ...
             float angle = atan2f(dy, dx);
-
-            // Adjust arrow appearance based on energy urgency
             float energyPercent = game->rider.energy / MAX_ENERGY;
             float arrowSize = 20.0f;
             float pulseSpeed = 5.0f;
             Color arrowColor = SKYBLUE;
             Color outlineColor = SKYBLUE;
 
-            // Critical energy (< 20%): Red, fast pulsing, larger
             if (energyPercent < 0.2f) {
-                arrowSize = 30.0f;
-                pulseSpeed = 10.0f;
-                arrowColor = RED;
+                arrowSize = 30.0f; pulseSpeed = 10.0f; arrowColor = RED;
                 outlineColor = (Color){255, 100, 100, 255};
-            }
-            // Low energy (< 40%): Orange, medium pulsing
-            else if (energyPercent < 0.4f) {
-                arrowSize = 25.0f;
-                pulseSpeed = 7.0f;
-                arrowColor = ORANGE;
+            } else if (energyPercent < 0.4f) {
+                arrowSize = 25.0f; pulseSpeed = 7.0f; arrowColor = ORANGE;
                 outlineColor = (Color){255, 200, 100, 255};
-            }
-            // Medium energy (< 60%): Yellow
-            else if (energyPercent < 0.6f) {
-                arrowColor = YELLOW;
-                outlineColor = (Color){255, 255, 100, 255};
+            } else if (energyPercent < 0.6f) {
+                arrowColor = YELLOW; outlineColor = (Color){255, 255, 100, 255};
             }
 
-            // Calculate arrow points
             Vector2 arrowTip = {edgeX, edgeY};
-            Vector2 arrowBase1 = {
-                edgeX - cosf(angle - 0.5f) * arrowSize,
-                edgeY - sinf(angle - 0.5f) * arrowSize
-            };
-            Vector2 arrowBase2 = {
-                edgeX - cosf(angle + 0.5f) * arrowSize,
-                edgeY - sinf(angle + 0.5f) * arrowSize
-            };
+            Vector2 arrowBase1 = { edgeX - cosf(angle - 0.5f) * arrowSize, edgeY - sinf(angle - 0.5f) * arrowSize };
+            Vector2 arrowBase2 = { edgeX - cosf(angle + 0.5f) * arrowSize, edgeY - sinf(angle + 0.5f) * arrowSize };
 
-            // Pulsing effect - more intense when energy is low
             float pulse = sinf(game->gameTime * pulseSpeed) * 0.4f + 0.6f;
-
-            // Apply pulse to arrow color alpha
             arrowColor.a = (int)(255 * pulse);
 
-            // Draw glow effect when critical
             if (energyPercent < 0.2f) {
                 float glowSize = arrowSize * 1.5f * pulse;
-                Vector2 glowBase1 = {
-                    edgeX - cosf(angle - 0.5f) * glowSize,
-                    edgeY - sinf(angle - 0.5f) * glowSize
-                };
-                Vector2 glowBase2 = {
-                    edgeX - cosf(angle + 0.5f) * glowSize,
-                    edgeY - sinf(angle + 0.5f) * glowSize
-                };
+                Vector2 glowBase1 = { edgeX - cosf(angle - 0.5f) * glowSize, edgeY - sinf(angle - 0.5f) * glowSize };
+                Vector2 glowBase2 = { edgeX - cosf(angle + 0.5f) * glowSize, edgeY - sinf(angle + 0.5f) * glowSize };
                 DrawTriangle(arrowTip, glowBase1, glowBase2, Fade(RED, 0.3f));
             }
-
-            // Draw the arrow triangle
             DrawTriangle(arrowTip, arrowBase1, arrowBase2, arrowColor);
             DrawTriangleLines(arrowTip, arrowBase1, arrowBase2, outlineColor);
-
-            // Draw distance text with urgency coloring
             float distance = Vector3Distance(game->rider.segments[0].position, game->powerups[i].position);
             int fontSize = (energyPercent < 0.2f) ? 16 : 12;
-            DrawText(TextFormat("%.0fm", distance), (int)(edgeX - 15), (int)(edgeY - 35), fontSize, outlineColor);
-
-            // Add "ENERGY!" text when critical
-            if (energyPercent < 0.2f) {
-                DrawText("ENERGY!", (int)(edgeX - 25), (int)(edgeY + 10), 12, RED);
-            }
+            const char* distText = TextFormat("%.0fm", distance);
+            int textWidth = MeasureText(distText, fontSize);
+            Vector2 textPos = { edgeX, edgeY };
+            textPos.x -= textWidth/2;
+            textPos.y -= (dy > 0.5f ? arrowSize + 5 : -arrowSize - fontSize);
+            textPos.x = fmaxf(5, fminf(renderWidth - textWidth - 5, textPos.x));
+            textPos.y = fmaxf(5, fminf(renderHeight - fontSize - 5, textPos.y));
+            DrawText(distText, (int)textPos.x, (int)textPos.y, fontSize, outlineColor);
         }
     }
 }
@@ -1554,7 +1567,7 @@ int main(int argc, char* argv[]) {
 
         // Render off-screen indicators for energy pickups (skip if in menu)
         if (game->rider.alive && !game->paused && !game->gameOver && !game->inMenu) {
-            RenderOffscreenIndicators(game, engine);
+            RenderPickupIndicators(game, engine);
         }
 
         // Finalize frame and draw to screen
