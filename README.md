@@ -20,6 +20,30 @@ In Space is Left, you control a futuristic line rider that continuously moves fo
 - **2** - Select Hardcore difficulty (in menu)
 - **ESC** - Exit game
 
+### 🎮 Gamepad/Controller Support
+
+The game fully supports USB gamepads and controllers! When a gamepad is connected, you can use:
+
+#### Menu Navigation
+- **D-Pad Left** - Select Easy difficulty
+- **D-Pad Right** - Select Hardcore difficulty  
+- **A Button** - Start game / Restart when game over
+- **B Button** - Return to main menu (when game over)
+- **Start Button** - Pause/Resume game
+
+#### Gameplay Controls
+- **A Button** - Turn left (digital control)
+- **Right Bumper (RB/R1)** - Turn left (digital control)
+- **Right Trigger (RT/R2)** - Turn left (analog - variable turn speed)
+- **Left Stick (Left)** - Turn left (analog - variable turn speed)
+- **Y Button** - Switch camera modes
+
+#### Special Features
+- **Analog Control**: Right trigger and left stick provide variable turn speeds
+- **Auto-Detection**: Gamepads are automatically detected when connected
+- **Hot-Swapping**: You can connect/disconnect gamepads during gameplay
+- **Multi-Input**: Keyboard, mouse, and gamepad controls work simultaneously
+
 ### Camera Controls
 - **Mouse Wheel** - Zoom in/out
 - **Middle Mouse + Drag** - Pan camera

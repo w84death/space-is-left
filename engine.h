@@ -37,6 +37,11 @@
 #define MAX_ENTITIES 1000
 #define MAX_CONTROL_GROUPS 10
 
+// Gamepad settings
+#define MAX_GAMEPADS 4
+#define GAMEPAD_DEAD_ZONE 0.15f
+#define GAMEPAD_TRIGGER_THRESHOLD 0.1f
+
 // =====================================
 // Type Definitions
 // =====================================
@@ -150,6 +155,14 @@ typedef struct {
     Vector2 mouseDelta;
     float mouseWheel;
     
+    // Gamepad state
+    int activeGamepad;  // Currently active gamepad ID (-1 if none)
+    bool gamepadConnected[MAX_GAMEPADS];
+    Vector2 gamepadLeftStick[MAX_GAMEPADS];
+    Vector2 gamepadRightStick[MAX_GAMEPADS];
+    float gamepadLeftTrigger[MAX_GAMEPADS];
+    float gamepadRightTrigger[MAX_GAMEPADS];
+    
     // Engine state
     bool running;
     float deltaTime;
@@ -222,6 +235,18 @@ bool Input_IsMouseButtonReleased(int button);
 Vector2 Input_GetMousePosition(void);
 Vector2 Input_GetMouseDelta(void);
 float Input_GetMouseWheel(void);
+
+// Gamepad functions
+bool Input_IsGamepadAvailable(int gamepad);
+bool Input_IsGamepadButtonPressed(int gamepad, int button);
+bool Input_IsGamepadButtonDown(int gamepad, int button);
+bool Input_IsGamepadButtonReleased(int gamepad, int button);
+Vector2 Input_GetGamepadLeftStick(int gamepad);
+Vector2 Input_GetGamepadRightStick(int gamepad);
+float Input_GetGamepadLeftTrigger(int gamepad);
+float Input_GetGamepadRightTrigger(int gamepad);
+int Input_GetActiveGamepad(EngineState* engine);
+void Input_UpdateGamepads(EngineState* engine);
 
 // =====================================
 // Rendering Functions

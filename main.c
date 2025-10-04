@@ -262,9 +262,38 @@ void UpdateLineRider(GameState* game, EngineState* engine) {
     float deltaTime = engine->deltaTime * game->slowTimeMultiplier;
 
     // MAIN MECHANIC: Can only turn left!
+    float turnRate = 0.0f;
+    
+    // Keyboard and mouse controls (full speed)
     if (IsKeyDown(KEY_SPACE) || IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
-        rider->direction += TURN_SPEED * deltaTime * game->difficultyMultiplier;
-        rider->totalRotation += TURN_SPEED * deltaTime * game->difficultyMultiplier;
+        turnRate = 1.0f;
+    }
+    
+    // Add gamepad controls with analog support
+    if (engine->activeGamepad >= 0) {
+        // Digital controls (full speed)
+        if (IsGamepadButtonDown(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN) ||  // A button
+            IsGamepadButtonDown(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_TRIGGER_1)) {    // R1/RB
+            turnRate = 1.0f;
+        }
+        
+        // Analog controls (variable speed)
+        float triggerValue = engine->gamepadRightTrigger[engine->activeGamepad];
+        if (triggerValue > 0.1f) {
+            turnRate = fmaxf(turnRate, triggerValue);  // Use trigger value for variable turn
+        }
+        
+        // Left stick horizontal axis (only left direction)
+        float stickX = engine->gamepadLeftStick[engine->activeGamepad].x;
+        if (stickX < -0.1f) {
+            turnRate = fmaxf(turnRate, fabsf(stickX));  // Variable turn based on stick position
+        }
+    }
+    
+    if (turnRate > 0) {
+        float turnAmount = TURN_SPEED * turnRate * deltaTime * game->difficultyMultiplier;
+        rider->direction += turnAmount;
+        rider->totalRotation += turnAmount;
 
         // Check for complete turns
         if (rider->totalRotation >= 2 * PI) {
@@ -764,23 +793,32 @@ void RenderUI(GameState* game, EngineState* engine) {
 
         // Easy option
         Color easyColor = (game->difficulty == DIFFICULTY_EASY) ? GREEN : WHITE;
-        DrawText("[1] EASY", screenWidth / 2 - 150, 320, 25, easyColor);
+        const char* easyText = (engine->activeGamepad >= 0) ? "[1/D-PAD LEFT] EASY" : "[1] EASY";
+        DrawText(easyText, screenWidth / 2 - 150, 320, 25, easyColor);
         DrawText("Normal speed", screenWidth / 2 - 150, 350, 18, LIGHTGRAY);
         DrawText("For beginners", screenWidth / 2 - 150, 370, 18, LIGHTGRAY);
 
         // Hardcore option
         Color hardcoreColor = (game->difficulty == DIFFICULTY_HARDCORE) ? RED : WHITE;
-        DrawText("[2] HARDCORE", screenWidth / 2 + 20, 320, 25, hardcoreColor);
+        const char* hardcoreText = (engine->activeGamepad >= 0) ? "[2/D-PAD RIGHT] HARDCORE" : "[2] HARDCORE";
+        DrawText(hardcoreText, screenWidth / 2 + 20, 320, 25, hardcoreColor);
         DrawText("2x speed!", screenWidth / 2 + 20, 350, 18, ORANGE);
         DrawText("For experts", screenWidth / 2 + 20, 370, 18, ORANGE);
 
         // Start instruction
-        DrawText("Press ENTER to start", screenWidth / 2 - MeasureText("Press ENTER to start", 25) / 2, 450, 25, LIME);
+        const char* startText = (engine->activeGamepad >= 0) ? "Press ENTER or A to start" : "Press ENTER to start";
+        DrawText(startText, screenWidth / 2 - MeasureText(startText, 25) / 2, 450, 25, LIME);
 
         // High scores
         DrawText(TextFormat("Easy High Score: %d", game->highScore), screenWidth / 2 - 200, 520, 20, WHITE);
         DrawText(TextFormat("Hardcore High Score: %d", game->highScoreHardcore), screenWidth / 2 + 20, 520, 20, WHITE);
 
+        // Show gamepad status
+        if (engine->activeGamepad >= 0) {
+            DrawText(TextFormat("Gamepad %d Connected", engine->activeGamepad + 1), 
+                    screenWidth / 2 - MeasureText("Gamepad 1 Connected", 16) / 2, 540, 16, LIME);
+        }
+        
         DrawText("Press ESC to exit", screenWidth / 2 - MeasureText("Press ESC to exit", 18) / 2, 570, 18, DARKGRAY);
         return;
     }
@@ -825,12 +863,18 @@ void RenderUI(GameState* game, EngineState* engine) {
     }
 
     // Controls
-    DrawText("SPACE or LEFT MOUSE: Turn Left", screenWidth - 300, screenHeight - 30, 16, LIGHTGRAY);
+    // Control hints - update based on gamepad connection
+    if (engine->activeGamepad >= 0) {
+        DrawText("SPACE/MOUSE/A/RT/L-STICK: Turn Left", screenWidth - 350, screenHeight - 30, 16, LIGHTGRAY);
+    } else {
+        DrawText("SPACE or LEFT MOUSE: Turn Left", screenWidth - 300, screenHeight - 30, 16, LIGHTGRAY);
+    }
 
     // Pause indicator
-    if (game->paused) {
-        DrawText("PAUSED", screenWidth / 2 - MeasureText("PAUSED", 50) / 2, screenHeight / 2 - 25, 50, WHITE);
-        DrawText("Press P to Resume", screenWidth / 2 - MeasureText("Press P to Resume", 20) / 2, screenHeight / 2 + 30, 20, LIGHTGRAY);
+    if (game->paused && !game->gameOver) {
+        DrawText("PAUSED", screenWidth / 2 - MeasureText("PAUSED", 40) / 2, screenHeight / 2 - 20, 40, YELLOW);
+        const char* resumeText = (engine->activeGamepad >= 0) ? "Press P or START to resume" : "Press P to resume";
+        DrawText(resumeText, screenWidth / 2 - MeasureText(resumeText, 20) / 2, screenHeight / 2 + 30, 20, WHITE);
     }
 
     // Game over
@@ -890,13 +934,18 @@ void UpdateGame(GameState* game, EngineState* engine) {
 
     // Handle menu input
     if (game->inMenu) {
-        if (IsKeyPressed(KEY_ONE)) {
+        // Keyboard or gamepad D-pad/left stick for difficulty selection
+        if (IsKeyPressed(KEY_ONE) || 
+            (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_LEFT_FACE_LEFT))) {
             game->difficulty = DIFFICULTY_EASY;
         }
-        if (IsKeyPressed(KEY_TWO)) {
+        if (IsKeyPressed(KEY_TWO) || 
+            (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_LEFT_FACE_RIGHT))) {
             game->difficulty = DIFFICULTY_HARDCORE;
         }
-        if (IsKeyPressed(KEY_ENTER)) {
+        // Start game with Enter or gamepad A button
+        if (IsKeyPressed(KEY_ENTER) || 
+            (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))) {
             game->inMenu = false;
             InitGame(game);
         }
@@ -909,7 +958,9 @@ void UpdateGame(GameState* game, EngineState* engine) {
     }
 
     // Handle pause
-    if (IsKeyPressed(KEY_P) && !game->gameOver) {
+    if ((IsKeyPressed(KEY_P) || 
+         (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_MIDDLE_RIGHT))) 
+        && !game->gameOver) {
         game->paused = !game->paused;
     }
 
@@ -926,11 +977,15 @@ void UpdateGame(GameState* game, EngineState* engine) {
             }
         }
 
-        if (IsKeyPressed(KEY_ENTER)) {
+        // Restart with Enter or gamepad A button
+        if (IsKeyPressed(KEY_ENTER) || 
+            (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))) {
             InitGame(game);
             return;
         }
-        if (IsKeyPressed(KEY_M)) {
+        // Return to menu with M key or gamepad B button
+        if (IsKeyPressed(KEY_M) || 
+            (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT))) {
             game->inMenu = true;
             game->gameOver = false;
             return;

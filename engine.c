@@ -52,6 +52,16 @@ EngineState* Engine_Init(int width, int height, const char* title) {
         engine->controlGroups[i].entityCount = 0;
     }
     
+    // Initialize gamepad state
+    engine->activeGamepad = -1;
+    for (int i = 0; i < MAX_GAMEPADS; i++) {
+        engine->gamepadConnected[i] = false;
+        engine->gamepadLeftStick[i] = (Vector2){0, 0};
+        engine->gamepadRightStick[i] = (Vector2){0, 0};
+        engine->gamepadLeftTrigger[i] = 0;
+        engine->gamepadRightTrigger[i] = 0;
+    }
+    
     // Set default display options
     engine->showGrid = true;
     engine->showAxes = true;

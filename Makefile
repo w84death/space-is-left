@@ -146,7 +146,7 @@ dist: release
 	echo "Distribution package created: space-is-left-$(shell date +%Y%m%d).tar.gz"
 
 # Create Windows distribution package
-dist-windows: windows
+dist-windows: windows-with-raylib
 	mkdir -p dist-win
 	cp $(TARGET).exe dist-win/
 	echo "@echo off" > dist-win/run.bat
