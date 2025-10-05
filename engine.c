@@ -86,6 +86,9 @@ EngineState* Engine_Init(int width, int height, const char* title) {
     InitWindow(engine->windowWidth, engine->windowHeight, engine->windowTitle);
     SetTargetFPS(DEFAULT_FPS);
     
+    // Disable ESC key as exit key so we can handle it ourselves
+    SetExitKey(KEY_NULL);
+    
     // Ensure we're in fullscreen mode
     if (!IsWindowFullscreen()) {
         ToggleFullscreen();

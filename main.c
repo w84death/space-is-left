@@ -133,6 +133,7 @@ typedef struct {
     bool paused;
     bool gameOver;
     bool inMenu;
+    bool showPauseMenu;
     DifficultyLevel difficulty;
     float difficultyMultiplier;
     float cameraShake;
@@ -1254,13 +1255,6 @@ void RenderUI(GameState* game, EngineState* engine) {
     DrawText(game->showFPS ? "FPS: ON (F to toggle)" : "FPS: OFF (F to toggle)",
              10, screenHeight - 32, 10, game->showFPS ? GREEN : DARKGRAY);
 
-    // Pause indicator
-    if (game->paused && !game->gameOver) {
-        DrawText("PAUSED", screenWidth / 2 - MeasureText("PAUSED", 24) / 2, screenHeight / 2 - 12, 24, YELLOW);
-        const char* resumeText = (engine->activeGamepad >= 0) ? "Press P or START to resume" : "Press P to resume";
-        DrawText(resumeText, screenWidth / 2 - MeasureText(resumeText, 14) / 2, screenHeight / 2 + 20, 14, WHITE);
-    }
-
     // Game over
     if (game->gameOver) {
         DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.7f));
@@ -1277,6 +1271,26 @@ void RenderUI(GameState* game, EngineState* engine) {
                 screenHeight / 2 + 50, 14, LIGHTGRAY);
         DrawText("Press ESC to Exit", screenWidth / 2 - MeasureText("Press ESC to Exit", 14) / 2,
                 screenHeight / 2 + 70, 14, LIGHTGRAY);
+    }
+
+    // Pause menu
+    if (game->showPauseMenu && !game->gameOver) {
+        DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.8f));
+        DrawText("GAME PAUSED", screenWidth / 2 - MeasureText("GAME PAUSED", 30) / 2, screenHeight / 2 - 60, 30, YELLOW);
+        DrawText(TextFormat("Score: %d", (int)game->rider.score),
+                screenWidth / 2 - MeasureText(TextFormat("Score: %d", (int)game->rider.score), 16) / 2,
+                screenHeight / 2 - 20, 16, WHITE);
+
+        const char* menuText = (engine->activeGamepad >= 0) ? "Press ENTER or A for Main Menu" : "Press ENTER for Main Menu";
+        DrawText(menuText, screenWidth / 2 - MeasureText(menuText, 14) / 2,
+                screenHeight / 2 + 10, 14, GREEN);
+
+        const char* altMenuText = (engine->activeGamepad >= 0) ? "(or M/B for Main Menu)" : "(or M for Main Menu)";
+        DrawText(altMenuText, screenWidth / 2 - MeasureText(altMenuText, 12) / 2,
+                screenHeight / 2 + 30, 12, DARKGRAY);
+
+        DrawText("Press ESC to Resume", screenWidth / 2 - MeasureText("Press ESC to Resume", 14) / 2,
+                screenHeight / 2 + 50, 14, LIGHTGRAY);
     }
 }
 
@@ -1329,6 +1343,7 @@ void InitGame(GameState* game) {
     game->paused = false;
     game->gameOver = false;
     game->inMenu = false;
+    game->showPauseMenu = false;
     game->cameraShake = 0;
     game->powerupSpawnTimer = 2.0f / game->difficultyMultiplier;
 
@@ -1343,6 +1358,24 @@ void InitGame(GameState* game) {
 
 void UpdateGame(GameState* game, EngineState* engine) {
     float deltaTime = engine->deltaTime;
+
+    // Handle ESC key
+    if (IsKeyPressed(KEY_ESCAPE)) {
+        if (game->inMenu) {
+            // Quit game from main menu
+            engine->running = false;
+        } else if (game->showPauseMenu) {
+            // Close pause menu and resume game
+            game->showPauseMenu = false;
+            game->paused = false;
+            PlayMenuSound(game);
+        } else if (!game->gameOver) {
+            // Open pause menu during gameplay
+            game->showPauseMenu = true;
+            game->paused = true;
+            PlayPauseSound(game);
+        }
+    }
 
     // Handle menu input
     if (game->inMenu) {
@@ -1367,15 +1400,38 @@ void UpdateGame(GameState* game, EngineState* engine) {
         return;
     }
 
+    // Handle pause menu input
+    if (game->showPauseMenu) {
+        // Go to main menu with Enter or gamepad A button
+        if (IsKeyPressed(KEY_ENTER) ||
+            (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))) {
+            game->inMenu = true;
+            game->showPauseMenu = false;
+            game->paused = false;
+            game->gameOver = false;
+            PlayMenuSound(game);
+        }
+        // Return to main menu with M key or gamepad B button
+        if (IsKeyPressed(KEY_M) ||
+            (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT))) {
+            game->inMenu = true;
+            game->showPauseMenu = false;
+            game->paused = false;
+            game->gameOver = false;
+            PlayMenuSound(game);
+        }
+        return;
+    }
+
     // Update game time
     if (!game->paused && !game->gameOver) {
         game->gameTime += deltaTime;
     }
 
-    // Handle pause
+    // Handle pause with P key (toggle simple pause, not pause menu)
     if ((IsKeyPressed(KEY_P) ||
          (engine->activeGamepad >= 0 && IsGamepadButtonPressed(engine->activeGamepad, GAMEPAD_BUTTON_MIDDLE_RIGHT)))
-        && !game->gameOver) {
+        && !game->gameOver && !game->showPauseMenu) {
         game->paused = !game->paused;
         PlayPauseSound(game);
     }
@@ -1482,6 +1538,7 @@ int main(int argc, char* argv[]) {
 
     // Start in menu
     game->inMenu = true;
+    game->showPauseMenu = false;
     game->difficulty = DIFFICULTY_EASY;
     game->difficultyMultiplier = 1.0f;
 
