@@ -113,6 +113,26 @@ upx-linux-with-raylib: linux-with-raylib
 	}
 	$(UPX) --best --lzma $(TARGET)
 
+upx-linux-static: linux-static
+	@command -v $(UPX) >/dev/null 2>&1 || { \
+		echo "UPX is not installed. Install it to compress executables."; \
+		echo "  Ubuntu/Debian: sudo apt-get install upx-ucl"; \
+		echo "  Fedora: sudo dnf install upx"; \
+		echo "  Arch: sudo pacman -S upx"; \
+		exit 1; \
+	}
+	$(UPX) --best --lzma $(TARGET)-static
+
+upx-linux-musl: linux-musl
+	@command -v $(UPX) >/dev/null 2>&1 || { \
+		echo "UPX is not installed. Install it to compress executables."; \
+		echo "  Ubuntu/Debian: sudo apt-get install upx-ucl"; \
+		echo "  Fedora: sudo dnf install upx"; \
+		echo "  Arch: sudo pacman -S upx"; \
+		exit 1; \
+	}
+	$(UPX) --best --lzma $(TARGET)-musl
+
 upx-windows32: windows32
 	@command -v $(UPX) >/dev/null 2>&1 || { \
 		echo "UPX is not installed. Install it to compress executables."; \
@@ -132,6 +152,13 @@ release-linux-upx: clean linux-with-raylib upx-linux-with-raylib
 
 release-windows-upx: CFLAGS += -O3 -DNDEBUG
 release-windows-upx: clean windows-with-raylib upx-windows-with-raylib
+
+# Optimized static builds
+release-linux-static: CFLAGS += -O3 -DNDEBUG
+release-linux-static: clean linux-static upx-linux-static
+
+release-linux-musl: CFLAGS += -O3 -DNDEBUG
+release-linux-musl: clean linux-musl upx-linux-musl
 
 # Build all platforms
 all-platforms: all windows
@@ -161,7 +188,7 @@ test-windows: windows
 
 # Clean build files
 clean:
-	rm -f $(TARGET) $(TARGET).exe $(TARGET)32.exe $(OBJECTS)
+	rm -f $(TARGET) $(TARGET).exe $(TARGET)32.exe $(TARGET)-static $(TARGET)-musl $(OBJECTS)
 	rm -rf lib/
 	rm -f tools/gamepad_test
 
@@ -189,6 +216,17 @@ install-mingw-fedora:
 
 install-mingw-arch:
 	sudo pacman -S --needed mingw-w64-gcc
+
+# Install musl for static compilation
+install-musl-ubuntu:
+	sudo apt-get update
+	sudo apt-get install -y musl-dev musl-tools
+
+install-musl-fedora:
+	sudo dnf install -y musl-gcc musl-libc-static
+
+install-musl-arch:
+	sudo pacman -S --needed musl
 
 # Download pre-compiled RayLib for Windows (MinGW)
 download-raylib-windows:
@@ -220,7 +258,31 @@ linux-with-raylib: download-raylib-linux
 	$(CC) $(SOURCES) -o $(TARGET) $(CFLAGS) \
 		-I./lib/linux/raylib-5.5_linux_amd64/include \
 		-L./lib/linux/raylib-5.5_linux_amd64/lib \
-		-lraylib -lGL -lm -lpthread -ldl -lrt -lX11 -static-libgcc
+		-Wl,-Bstatic -lraylib -Wl,-Bdynamic \
+		-lGL -lm -lpthread -ldl -lrt -lX11 \
+		-static-libgcc -static-libstdc++
+
+# Linux compilation with fully static linking (maximum portability)
+linux-static: download-raylib-linux
+	$(CC) $(SOURCES) -o $(TARGET)-static $(CFLAGS) \
+		-I./lib/linux/raylib-5.5_linux_amd64/include \
+		-L./lib/linux/raylib-5.5_linux_amd64/lib \
+		-static -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 \
+		-Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+
+# Linux compilation with musl for better static linking
+linux-musl: download-raylib-linux
+	@command -v musl-gcc >/dev/null 2>&1 || { \
+		echo "musl-gcc not found. Install musl-dev package."; \
+		echo "  Ubuntu/Debian: sudo apt-get install musl-dev musl-tools"; \
+		echo "  Fedora: sudo dnf install musl-gcc musl-libc-static"; \
+		echo "  Arch: sudo pacman -S musl"; \
+		exit 1; \
+	}
+	musl-gcc $(SOURCES) -o $(TARGET)-musl $(CFLAGS) \
+		-I./lib/linux/raylib-5.5_linux_amd64/include \
+		-L./lib/linux/raylib-5.5_linux_amd64/lib \
+		-static -lraylib -lm -lpthread
 
 # Create distribution package
 dist: release
@@ -269,6 +331,42 @@ dist-linux-upx: linux-with-raylib upx-linux-with-raylib
 	tar -czf space-is-left-linux-upx-$(shell date +%Y%m%d).tar.gz dist/
 	rm -rf dist/
 	echo "Compressed standalone Linux distribution package created: space-is-left-linux-upx-$(shell date +%Y%m%d).tar.gz"
+
+# Create fully static Linux distribution package
+dist-linux-static: linux-static
+	mkdir -p dist
+	cp $(TARGET)-static dist/$(TARGET)
+	cp README.md dist/
+	echo "Space is Left - Game Engine (Fully Static Linux)" > dist/VERSION.txt
+	echo "Version: 1.0.0" >> dist/VERSION.txt
+	echo "Build Date: $(shell date)" >> dist/VERSION.txt
+	tar -czf space-is-left-linux-static-$(shell date +%Y%m%d).tar.gz dist/
+	rm -rf dist/
+	echo "Fully static Linux distribution package created: space-is-left-linux-static-$(shell date +%Y%m%d).tar.gz"
+
+# Create musl static Linux distribution package
+dist-linux-musl: linux-musl
+	mkdir -p dist
+	cp $(TARGET)-musl dist/$(TARGET)
+	cp README.md dist/
+	echo "Space is Left - Game Engine (Musl Static Linux)" > dist/VERSION.txt
+	echo "Version: 1.0.0" >> dist/VERSION.txt
+	echo "Build Date: $(shell date)" >> dist/VERSION.txt
+	tar -czf space-is-left-linux-musl-$(shell date +%Y%m%d).tar.gz dist/
+	rm -rf dist/
+	echo "Musl static Linux distribution package created: space-is-left-linux-musl-$(shell date +%Y%m%d).tar.gz"
+
+# Create compressed fully static Linux distribution package
+dist-linux-static-upx: linux-static upx-linux-static
+	mkdir -p dist
+	cp $(TARGET)-static dist/$(TARGET)
+	cp README.md dist/
+	echo "Space is Left - Game Engine (Fully Static Linux - UPX Compressed)" > dist/VERSION.txt
+	echo "Version: 1.0.0" >> dist/VERSION.txt
+	echo "Build Date: $(shell date)" >> dist/VERSION.txt
+	tar -czf space-is-left-linux-static-upx-$(shell date +%Y%m%d).tar.gz dist/
+	rm -rf dist/
+	echo "Compressed fully static Linux distribution package created: space-is-left-linux-static-upx-$(shell date +%Y%m%d).tar.gz"
 
 # Create Windows distribution package
 dist-windows: windows-with-raylib
@@ -326,6 +424,8 @@ help:
 	@echo "  make windows32    - Build 32-bit Windows exe"
 	@echo "  make windows-with-raylib - Build with downloaded RayLib"
 	@echo "  make linux-with-raylib - Build standalone Linux with downloaded RayLib"
+	@echo "  make linux-static - Build fully static Linux binary (maximum portability)"
+	@echo "  make linux-musl   - Build static Linux binary using musl libc"
 	@echo "  make test-windows - Test Windows exe with Wine"
 	@echo "  make all-platforms - Build for both Linux and Windows"
 	@echo ""
@@ -333,17 +433,24 @@ help:
 	@echo "  make upx          - Compress Linux binary with UPX"
 	@echo "  make upx-windows  - Compress Windows exe with UPX"
 	@echo "  make upx-linux-with-raylib - Compress standalone Linux binary with UPX"
+	@echo "  make upx-linux-static - Compress fully static Linux binary with UPX"
+	@echo "  make upx-linux-musl - Compress musl static Linux binary with UPX"
 	@echo "  make upx-windows-with-raylib - Compress Windows exe (with RayLib) with UPX"
 	@echo "  make upx-windows32 - Compress 32-bit Windows exe with UPX"
 	@echo "  make release-upx  - Build optimized and compressed Linux binary"
 	@echo "  make release-linux-upx - Build optimized and compressed standalone Linux"
 	@echo "  make release-windows-upx - Build optimized and compressed Windows exe"
+	@echo "  make release-linux-static - Build optimized and compressed fully static Linux"
+	@echo "  make release-linux-musl - Build optimized and compressed musl static Linux"
 	@echo ""
 	@echo "Distribution:"
 	@echo "  make dist         - Create distribution package"
 	@echo "  make dist-upx     - Create compressed distribution package"
 	@echo "  make dist-linux   - Create standalone Linux distribution package"
 	@echo "  make dist-linux-upx - Create compressed standalone Linux distribution package"
+	@echo "  make dist-linux-static - Create fully static Linux distribution package"
+	@echo "  make dist-linux-musl - Create musl static Linux distribution package"
+	@echo "  make dist-linux-static-upx - Create compressed fully static Linux distribution package"
 	@echo "  make dist-windows - Create Windows distribution package"
 	@echo "  make dist-windows-upx - Create compressed Windows distribution package"
 	@echo ""
@@ -362,17 +469,21 @@ help:
 	@echo "  make install-mingw-ubuntu - Install MinGW on Ubuntu/Debian"
 	@echo "  make install-mingw-fedora - Install MinGW on Fedora"
 	@echo "  make install-mingw-arch   - Install MinGW on Arch"
+	@echo "  make install-musl-ubuntu  - Install musl development tools on Ubuntu/Debian"
+	@echo "  make install-musl-fedora  - Install musl development tools on Fedora"
+	@echo "  make install-musl-arch    - Install musl development tools on Arch"
 	@echo "  make download-raylib-windows - Download RayLib for Windows"
 	@echo "  make download-raylib-linux - Download RayLib for Linux"
 	@echo ""
 	@echo "Info:"
 	@echo "  make help         - Show this help message"
 
-.PHONY: all windows windows-dynamic windows32 windows-with-raylib linux-with-raylib \
+.PHONY: all windows windows-dynamic windows32 windows-with-raylib linux-with-raylib linux-static linux-musl \
         debug release all-platforms run test-windows \
-        upx upx-windows upx-linux-with-raylib upx-windows-with-raylib upx-windows32 \
-        release-upx release-linux-upx release-windows-upx \
-        clean rebuild dist dist-upx dist-linux dist-linux-upx dist-windows dist-windows-upx \
-        format check install-deps-ubuntu install-deps-fedora install-deps-arch \
+        upx upx-windows upx-linux-with-raylib upx-windows-with-raylib upx-windows32 upx-linux-static upx-linux-musl \
+        release-upx release-linux-upx release-windows-upx release-linux-static release-linux-musl \
+        clean rebuild dist dist-upx dist-linux dist-linux-upx dist-linux-static dist-linux-musl dist-linux-static-upx \
+        dist-windows dist-windows-upx format check install-deps-ubuntu install-deps-fedora install-deps-arch \
         install-mingw-ubuntu install-mingw-fedora install-mingw-arch \
+        install-musl-ubuntu install-musl-fedora install-musl-arch \
         download-raylib-windows download-raylib-linux gamepad-test run-gamepad-test help
